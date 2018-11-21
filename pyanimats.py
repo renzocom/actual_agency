@@ -128,7 +128,7 @@ class World:
 
     def _runGameTrial(self, trial, animat, block):
 
-        total_time = self.height # one paused time step + 34 real times steps
+        total_time = self.height+1 # one paused time step + 34 real times steps
         motor_activity = animat.getMotorActivity(trial)
 
         # t=0 # Initial position (game hasn't started yet.)
@@ -141,14 +141,15 @@ class World:
 
             animat.x = self.screen.wrapper(animat.x + motor_activity[t])
 
-            if block.direction == 'right':
-                block.x = self.screen.wrapper(block.x + 1)
-            else:
-                block.x = self.screen.wrapper(block.x - 1)
+            if t<total_time:
+                if block.direction == 'right':
+                    block.x = self.screen.wrapper(block.x + 1)
+                else:
+                    block.x = self.screen.wrapper(block.x - 1)
 
-            block.y = block.y + 1
+                block.y = block.y + 1
 
-            if t == 32:
+            if t == total_time-1:
                 win = self._check_win(block, animat) # animat catches the block if it is right below it in t=world_height-1
 
             self.screen.drawAnimat(animat)
@@ -161,8 +162,8 @@ class World:
         animal_init_x = trial % self.width
         self.animat.set_x(animal_init_x)
 
-        block_size = self.block_types[trial//(self.width * 2)]
-        block_direction = 'left' if (trial % self.width * 2) // self.width == 0 else 'right'
+        block_size = self.block_types[trial //(self.width * 2)]
+        block_direction = 'left' if (trial // self.width) % 2 == 0 else 'right'
         block_value = 'catch' if (trial // (self.width * 2)) % 2 == 0 else 'avoid'
         block = Block(block_size, block_direction, block_value, 0)
 
@@ -175,12 +176,14 @@ class World:
         self.animat = Animat(animat_params)
         self.animat.saveBrainActivity(brain_history)
 
-        self.history = np.zeros((self.n_trials,self.height,self.height+1,self.width))
+        self.history = np.zeros((self.n_trials,self.height+1,self.height+1,self.width))
 
+        wins = []
         for trial in range(self.n_trials):
             self.animat, block = self._getInitialCond(trial)
             self.history[trial,:,:,:], win = self._runGameTrial(trial,self.animat, block)
-        return self.history
+            wins.append(win)
+        return self.history, wins
 
     def _check_win(self, block, animat):
         block_ixs = self.screen.wrapper(range(block.x, block.x + len(block)))
@@ -193,12 +196,18 @@ class World:
         score = 0
         for trial in range(self.n_trials):
             animat, block = self._getInitialCond(trial)
+            # print('trial {}'.format(trial))
+            # print('A0: {} B0: {} ({}, {}, {})'.format(animat.x,block.x,len(block),block.direction, block.type))
 
-            animat.x = self.screen.wrapper(animat.x + np.sum(animat.getMotorActivity(trial)[:-2]))
+            animat.x = self.screen.wrapper(animat.x + np.sum(animat.getMotorActivity(trial)[:]))
 
             direction = -1 if block.direction=='left' else 1
-            block.x = self.screen.wrapper(block.x + (self.height-2)*direction)
+            block.x = self.screen.wrapper(block.x + (self.height)*direction)
 
+            win = 'WIN' if self._check_win(block, animat) else 'LOST'
+            # print('Af: {} Bf: {}'.format(animat.x, block.x))
+            # print(win)
+            # print()
             score += int(self._check_win(block, animat))
         print('Score: {}/{}'.format(score, self.n_trials))
         return score
