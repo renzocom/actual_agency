@@ -34,6 +34,7 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
         raise AttributeError("Unknown gate type.")
 
     print('Reading genome...')
+    ixs = np.where(genome==start_codon)[0]
     # making sure start codon is not the last codon
     if np.max(ixs)==len(genome)-1:
         ixs = ixs[:-1]
