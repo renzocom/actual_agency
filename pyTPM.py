@@ -35,6 +35,10 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
 
     print('Reading genome...')
     ixs = np.where(genome==start_codon)[0]
+    
+    if np.max(ixs)>=len(genome)-max_gene_length-1:
+        ixs = ixs[:-1]
+    
     gene_ixs = [ix for ix in ixs if genome[ix+1]==255-start_codon]
     
     if np.max(ixs)==len(genome)-1:
