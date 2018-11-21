@@ -20,7 +20,10 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
             gate_TPMs: the TPM for each gate specified by the genome (which in turn specifies the full TPM)
             cm: Connectivity matrix (nodes x nodes) for the agent. 1's indicate there is a connection, 0's indicate the opposite
     '''
-    max_gene_length = 400
+    if gate_type=='deterministic':
+        max_gene_length = 300
+    elif gate_type=='decomposable':
+        max_gene_length = 400
     max_inputs = max_outputs = max_io = 4 # 4 inputs, 4 outputs per HMG
     if gate_type == 'deterministic':
         start_codon = 43
