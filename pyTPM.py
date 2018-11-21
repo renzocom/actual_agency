@@ -24,6 +24,7 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
         max_gene_length = 300
     elif gate_type=='decomposable':
         max_gene_length = 400
+        
     max_inputs = max_outputs = max_io = 4 # 4 inputs, 4 outputs per HMG
     if gate_type == 'deterministic':
         start_codon = 43
@@ -35,6 +36,9 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
     print('Reading genome...')
     ixs = np.where(genome==start_codon)[0]
     gene_ixs = [ix for ix in ixs if genome[ix+1]==255-start_codon]
+    
+    if np.max(ixs)==len(genome)-1:
+        ixs = ixs[:-1]
 
     genes = np.array([genome[ix:ix+max_gene_length] for ix in gene_ixs])
     n_genes = genes.shape[0]
