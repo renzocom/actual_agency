@@ -18,7 +18,7 @@ def getBrainActivity(data, n_agents=1, n_trials=64, n_nodes=8, n_sensors=2,n_hid
     Function for generating a activity matrices for the animats given outputs from mabe
         Inputs:
             data: a pandas object containing the mabe output from activity recording
-            n_agents: number of agents recorded   
+            n_agents: number of agents recorded
             n_trials: number of trials for each agent
             n_nodes: total number of nodes in the agent brain (sensors+motrs+hidden)
             n_sensors: number of sensors in the agent brain
@@ -68,34 +68,34 @@ def get_occurrences(activityData,numSensors,numHidden,numMotors):
     size = activityData.shape
     x = np.zeros(size)
     y = np.zeros(size)
-    
+
 
     if len(size)==4:
         # deleting one timestep from each trial
-        x = np.delete(x,(-1),axis=2)  
+        x = np.delete(x,(-1),axis=2)
         y = np.delete(y,(-1),axis=2)
-        
+
         # filling matrices with values
         x = copy.deepcopy(activityData[:,:,:-1,:])
         y = copy.deepcopy(activityData[:,:,1:,:])
-        
+
         # setting sensors to 0 in y, and motors to zeros in x
         x[:,:,:,numSensors:numSensors+numMotors] = np.zeros(x[:,:,:,numSensors:numSensors+numMotors].shape)
         y[:,:,:,:numSensors] = np.zeros(y[:,:,:,:numSensors].shape)
-    
+
     elif len(size)==3:
         # deleting one timestep from each trial
-        x = np.delete(x,(-1),axis=1)  
-        y = np.delete(y,(-1),axis=1) 
-        
+        x = np.delete(x,(-1),axis=1)
+        y = np.delete(y,(-1),axis=1)
+
         # filling matrices with values
         x = copy.deepcopy(activityData[:,:-1,:])
         y = copy.deepcopy(activityData[:,1:,:])
-        
+
         # setting sensors to 0 in y, and motors to zeros in x
         x[:,:,numSensors:numSensors+numMotors] = np.zeros(x[:,:,numSensors:numSensors+numMotors].shape)
-        y[:,:,:numSensors] = np.zeros(y[:,:,:numSensors].shape) 
-    
+        y[:,:,:numSensors] = np.zeros(y[:,:,:numSensors].shape)
+
     return x, y
 
 
@@ -104,12 +104,12 @@ def get_occurrences(activityData,numSensors,numHidden,numMotors):
 def Bootstrap_mean(data,n):
     '''
     Function for doing bootstrap resampling of the mean for a 2D data matrix.
-        Inputs: 
+        Inputs:
             data: raw data samples to be bootsrap resampled (samples x datapoints)
             n: number of bootstrap samples to draw
-        Outputs: 
+        Outputs:
             means: matrix containing all bootstrap samples of the mean (n x datapoints)
-    '''    
+    '''
     datapoints = len(data)
     timesteps = len(data[0])
 
@@ -119,52 +119,52 @@ def Bootstrap_mean(data,n):
         # drawing random timeseries (with replacement) from data
         bootstrapdata = np.array([data[d][:] for d in ran.choice(list(range(0,datapoints)),datapoints,replace=True)])
         means[i] = np.mean(bootstrapdata,0)
-    
+
     return means
-    
-    
+
+
 ### PLOTTING FUNCTIONS
 
 def plot_LODdata_and_Bootstrap(x,LODdata):
     '''
     Function for doing bootstrap resampling of the mean for a 2D data matrix.
-        Inputs: 
+        Inputs:
             x:
             LODdata:
-        Outputs: 
+        Outputs:
             fig:
-    '''    
+    '''
 
     fit = Bootstrap_mean(LODdata,500)
     m_fit = np.mean(fit,0)
-    s_fit = np.std(fit,0) 
+    s_fit = np.std(fit,0)
     fig = plt.figure(figsize=[20,10])
     for LOD in LODdata:
         plt.plot(x,LOD,'r',alpha=0.2)
     plt.plot(x,m_fit,'b')
     plt.plot(x,m_fit+s_fit,'b:')
     plt.plot(x,m_fit-s_fit,'b:')
-    
+
     return fig
-    
-    
-    
+
+
+
 def plot_2LODdata_and_Bootstrap(x,LODdata1,LODdata2):
     '''
     Function for doing bootstrap resampling of the mean for a 2D data matrix.
-        Inputs: 
+        Inputs:
             x:
             LODdata:
-        Outputs: 
+        Outputs:
             fig:
-    '''    
+    '''
 
     fit1 = Bootstrap_mean(LODdata1,500)
     m_fit1 = np.mean(fit1,0)
-    s_fit1 = np.std(fit1,0) 
+    s_fit1 = np.std(fit1,0)
     fit2 = Bootstrap_mean(LODdata2,500)
     m_fit2 = np.mean(fit2,0)
-    s_fit2 = np.std(fit2,0) 
+    s_fit2 = np.std(fit2,0)
     fig = plt.figure(figsize=[20,10])
     for LOD1,LOD2 in zip(LODdata1,LODdata2):
         plt.plot(x,LOD1,'k',alpha=0.1)
@@ -175,24 +175,24 @@ def plot_2LODdata_and_Bootstrap(x,LODdata1,LODdata2):
     plt.plot(x,m_fit2,'y',linewidth=3)
     plt.plot(x,m_fit2+s_fit2,'y:',linewidth=2)
     plt.plot(x,m_fit2-s_fit2,'y:',linewidth=2)
-    
+
     return fig
 
 
 def hist2d_2LODdata(x,LODdata1x,LODdata1y,LODdata2x,LODdata2y):
     '''
     Function for doing bootstrap resampling of the mean for a 2D data matrix.
-        Inputs: 
+        Inputs:
             x:
             LODdata:
-        Outputs: 
+        Outputs:
             fig:
     '''
     xmin = np.min((np.min(LODdata1x),np.min(LODdata2x)))
     xmax = np.max((np.max(LODdata1x),np.max(LODdata2x)))
     ymin = np.min((np.min(LODdata1y),np.min(LODdata2y)))
     ymax = np.max((np.max(LODdata1y),np.max(LODdata2y)))
-    
+
     xbins = np.linspace(xmin,xmax,20)
     ybins = np.linspace(ymin,ymax,20)
     plt.figure()
@@ -200,7 +200,35 @@ def hist2d_2LODdata(x,LODdata1x,LODdata1y,LODdata2x,LODdata2y):
     plt.hist2d(np.ravel(LODdata1x),np.ravel(LODdata1y),[xbins,ybins],norm=mpl.colors.LogNorm())
     plt.subplot(122)
     plt.hist2d(np.ravel(LODdata2x),np.ravel(LODdata2y),[xbins,ybins],norm=mpl.colors.LogNorm())
-    
-    
+
+
 ### OTHER FUNCTIONS
 
+def plot_knockout_brain(cm, state):
+    n_nodes = cm.shape[0]
+    state = np.array(state).astype(int)
+    pos = {'S1': (0,40), #'S2': (10, 40),
+       'A': (0, 30), 'B': (10, 30),
+       'C': (0, 20), 'D': (10, 20),
+      'M1': (0,10), 'M2': (10,10)}
+
+    G = nx.from_numpy_matrix(cm, create_using=nx.DiGraph())
+    labels = ['S1','M1','M2','A','B','C','D']
+    mapping = {key:x for key,x in zip(range(7),labels)}
+    G = nx.relabel_nodes(G, mapping)
+
+    blue_on, red_on, green_on, grey_on = '#77b3f9', '#f98e81', '#8abf69', '#adadad'
+    blue_off, red_off, green_off, grey_off = '#e8f0ff','#ffe9e8', '#f0ffe8', '#f2f2f2'
+    colors = np.array([[red_off,blue_off,green_off, grey_off],[red_on,blue_on,green_on, grey_on]])
+    nodetype = (0,1,1,2,2,2,2)
+
+    node_colors = [colors[state[i],nodetype[i]] for i in range(n_nodes)]
+    # Grey isolate nodes
+#     isolates = [x for x in nx.isolates(G)]
+#     node_colors = [node_colors[i] if labels[i] not in isolates else colors[state[i],3] for i in range(len(G.nodes))]
+    self_nodes = [labels[i] for i in range(n_nodes) if cm[i,i]==1]
+    linewidths = [2 if labels[i] in self_nodes else 1 for i in range(n_nodes)]
+
+#     fig, ax = plt.subplots(1,1, figsize=(4,6))
+    nx.draw(G, with_labels=True, node_size=1000, node_color=node_colors,
+    edgecolors='#000000', linewidths=linewidths, pos=pos)
