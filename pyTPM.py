@@ -6,6 +6,8 @@ import pyphi
 from pathlib import Path
 import scipy.io as sio
 
+# TEST
+
 def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='deterministic',states_convention='loli',remove_sensor_motor_effects=False):
     '''
     Extracts the TPM from the genome output by mabe.
@@ -14,7 +16,7 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
             n_nodes:(maximal) number of nodes in the agent
             gate_type: string specifying the type of gates coded by the genome ('deterministic' or 'decomposable')
             states_convention: string specifying the convention used for ordering of the states ('holi' or 'loli')
-            
+
         Outputs:
             TPM: The full state transition matrix for the agent (states x nodes)
             gate_TPMs: the TPM for each gate specified by the genome (which in turn specifies the full TPM)
@@ -24,7 +26,7 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
         max_gene_length = 300
     elif gate_type=='decomposable':
         max_gene_length = 400
-        
+
     max_inputs = max_outputs = max_io = 4 # 4 inputs, 4 outputs per HMG
     if gate_type == 'deterministic':
         start_codon = 43
@@ -44,7 +46,7 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
     # making sure all genes are maximum length
     if len(gene_ixs)>0 and np.max(gene_ixs)>=len(genome)-max_gene_length-1:
         gene_ixs = gene_ixs[:-1]
-    
+
     genes = np.array([genome[ix:ix+max_gene_length] for ix in gene_ixs])
     n_genes = genes.shape[0]
 
@@ -103,11 +105,11 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
         full_TPM[:,:,i] = expand_gate_TPM(gate_TPM, inputs, outputs, n_nodes, states_convention)
 
     TPM = 1 - np.prod(1 - full_TPM,2)
-    
+
     if remove_sensor_motor_effects:
         TPM = remove_motor_sensor_effects(TPM,n_sensors,n_motors,n_nodes)
         cm = remove_motor_sensor_connections(cm,n_sensors,n_motors)
-    
+
     print('Done.')
     return TPM, gate_TPMs, cm
 
@@ -224,11 +226,11 @@ def expand_gate_TPM(gate_TPM, inputs, outputs, n_nodes, states_convention):
 
 def remove_motor_sensor_effects(TPM,n_sensors=2,n_motors=2,n_nodes=4,states_convention = 'loli'):
     '''
-    
+
         Inputs:
-            
+
         Outputs:
-            
+
     '''
     # forcing all sensors to be zero in the effect
     TPM[:,0:n_sensors] = np.ones(np.shape(TPM[:,0:n_sensors]))/2.
@@ -259,15 +261,15 @@ def remove_motor_sensor_effects(TPM,n_sensors=2,n_motors=2,n_nodes=4,states_conv
 
 def remove_motor_sensor_connections(cm,n_sensors=2,n_motors=2):
     '''
-    
+
         Inputs:
-            
+
         Outputs:
-            
+
     '''
     # setting all connections to sensors to 0
     cm[:,0:n_sensors] = np.zeros(np.shape(cm[:,0:n_sensors]))
     # setting all connections from motors to 0
     cm[n_sensors:n_sensors+n_motors] = np.zeros(np.shape(cm[n_sensors:n_sensors+n_motors]))
-    
+
     return cm
