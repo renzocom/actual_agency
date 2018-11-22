@@ -121,14 +121,14 @@ class Screen:
             return [ix%self.width for ix in index]
 
 class World:
-    def __init__(self, width, height):
-        self.width = width
+    def __init__(self, width=16, height=35):
+        self.width = width # ComplexiPhi world is 35 (and not 34! 34 is the number of updates)
         self.height = height
         self.screen = Screen(self.width, self.height)
 
     def _runGameTrial(self, trial, animat, block):
 
-        total_time = self.height+1 # one paused time step + 34 real times steps
+        total_time = self.height # 35 time steps, 34 updates
         motor_activity = animat.getMotorActivity(trial)
 
         # t=0 # Initial position (game hasn't started yet.)
@@ -149,12 +149,11 @@ class World:
 
                 block.y = block.y + 1
 
-            if t == total_time-1:
-                win = self._check_win(block, animat) # animat catches the block if it is right below it in t=world_height-1
-
             self.screen.drawAnimat(animat)
             self.screen.drawBlock(block)
             self.screen.saveCurrentScreen()
+        # animat catches the block if it overlaps with it in t=34
+        win = self._check_win(block, animat)
 
         return self.screen.screen_history, win
 
@@ -176,7 +175,7 @@ class World:
         self.animat = Animat(animat_params)
         self.animat.saveBrainActivity(brain_history)
 
-        self.history = np.zeros((self.n_trials,self.height+1,self.height+1,self.width))
+        self.history = np.zeros((self.n_trials,self.height,self.height+1,self.width))
 
         wins = []
         for trial in range(self.n_trials):
@@ -202,7 +201,7 @@ class World:
             animat.x = self.screen.wrapper(animat.x + np.sum(animat.getMotorActivity(trial)[:]))
 
             direction = -1 if block.direction=='left' else 1
-            block.x = self.screen.wrapper(block.x + (self.height)*direction)
+            block.x = self.screen.wrapper(block.x + (self.height-1)*direction)
 
             win = 'WIN' if self._check_win(block, animat) else 'LOST'
             # print('Af: {} Bf: {}'.format(animat.x, block.x))
