@@ -19,7 +19,7 @@ def parseTPM(TPM_jory):
     '''
     Function for parsing the output from the mabe TPMworld into a readable format
         Inputs:
-            TPM_jory: (unpickled) csv output from mabe TPM-world 
+            TPM_jory: (unpickled) csv output from mabe TPM-world
         Outputs:
             allgates: A list of lists (num_agents long) containing all gates in the agents genome
     '''
@@ -45,7 +45,11 @@ def parseTPM(TPM_jory):
                 animat = animat[idx2+1:]
         allgates.append(gates)
     return allgates
-    
+
+def get_genome(genomes, run, agent):
+    genome = genomes[run]['GENOME_root::_sites'][agent]
+    genome = np.squeeze(np.array(np.matrix(genome)))
+    return genome
 
 def getBrainActivity(data, n_agents=1, n_trials=64, n_nodes=8, n_sensors=2,n_hidden=4,n_motors=2):
     '''
