@@ -43,9 +43,7 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
 
     gene_ixs = [ix for ix in ixs if genome[ix+1]==255-start_codon]
 
-    # making sure all genes are maximum length
-    if len(gene_ixs)>0 and np.max(gene_ixs)>=len(genome)-max_gene_length-1:
-        gene_ixs = gene_ixs[:-1]
+    print(gene_ixs)
 
     genes = np.array([genome[ix:ix+max_gene_length] for ix in gene_ixs])
     n_genes = genes.shape[0]
