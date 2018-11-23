@@ -89,6 +89,22 @@ def getBrainActivity(data, n_agents=1, n_trials=64, n_nodes=8, n_sensors=2,n_hid
                 brain_activity[a,i,j,:] = nodes
     return brain_activity
 
+
+def parseActivity(path,file,n_runs=30,n_agents=61,n_trials=64,world_height=35,n_nodes=8,n_sensors=2,n_hidden=4,n_motors=2):
+    with open(os.path.join(path,file),'rb') as f:
+        activity = pickle.load(f)
+    
+    all_activity = np.zeros((n_runs,n_agents,n_trials,world_height,n_nodes),dtype=int)
+    for i in range(n_runs):
+        print('{}/{}'.format(i+1,n_runs))
+        all_activity[i,:,:,:,:] = getBrainActivity(activity[i],n_agents,n_trials,n_nodes,n_sensors,n_hidden,n_motors)
+        
+    with open(os.path.join(path,'activity_array.pkl'),'wb') as f:
+        pickle.dump(all_activity, f)
+    
+    return all_activity
+    
+    
 ### ACTTUAL CAUSATION ANALYSIS FUNCTIONS
 
 def get_occurrences(activityData,numSensors,numHidden,numMotors):

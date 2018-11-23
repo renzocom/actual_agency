@@ -110,6 +110,48 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
 
     print('Done.')
     return TPM, gate_TPMs, cm
+    
+def gates2TPM(gates,n_nodes,states_convention='loli',remove_sensor_motor_effects=False):
+    '''
+    Extracts the TPM from the genome output by mabe.
+        Inputs:
+
+        Outputs:
+        
+    '''
+    n_gates = len(gates)
+    cm = np.zeros((n_nodes,n_nodes))
+    full_TPM = np.zeros((2**n_nodes, n_nodes, n_gates))
+    gate_TPMs = []
+    for i,gate in zip(range(n_gates),gates):
+
+        # Get gate's inputs and outputs
+        inputs = gate['ins']
+        outputs = gate['outs']
+        
+        # Get list of all possible states from nodes
+        cm[np.ix_(inputs,outputs)] = 1
+
+        # Reduce gate's degenerate outputs (if there are)
+        gate_TPM = np.array(gate['logic'])
+        gate_TPM, outputs = reduce_degenerate_outputs(gate_TPM, outputs)
+        gate_TPM, inputs = reduce_degenerate_inputs(gate_TPM, inputs, states_convention)
+        
+        gate_TPMs.append({'type': gate['type'],
+                          'ins': inputs,
+                          'outs': outputs,
+                          'logic': gate_TPM.tolist()})
+        # Expand gate TPM
+        full_TPM[:,:,i] = expand_gate_TPM(gate_TPM, inputs, outputs, n_nodes, states_convention)
+
+    TPM = 1 - np.prod(1 - full_TPM,2)
+
+    if remove_sensor_motor_effects:
+        TPM = remove_motor_sensor_effects(TPM,n_sensors,n_motors,n_nodes)
+        cm = remove_motor_sensor_connections(cm,n_sensors,n_motors)
+
+    print('Done.')
+    return TPM, gate_TPMs, cm
 
 def get_states(n_nodes, convention='loli'):
     '''
