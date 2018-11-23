@@ -13,6 +13,38 @@ import scipy.io as sio
 
 
 ### MABE RELATED FUNCTIONS
+def parseTPM(TPM_jory):
+    '''
+    Function for parsing the output from the mabe TPMworld into a readable format
+        Inputs:
+            TPM_jory: (unpickled) csv output from mabe TPM-world 
+        Outputs:
+            allgates: A list of lists (num_agents long) containing all gates in the agents genome
+    '''
+    start = '{'
+    end = '}'
+    split = r'\r\n'
+    s = str(TPM_jory)
+    a=True
+
+    s_byanimats = s.split(split)[1:-1]
+    allgates = []
+    for animat in s_byanimats:
+        gates = []
+        a = True
+        while a:
+            idx1 = str(animat).find(start)
+            idx2 = str(animat).find(end)+1
+            if idx1==-1:
+                a = False
+            else:
+                gate_string = animat[idx1:idx2]
+                gates.append(eval(gate_string))
+                animat = animat[idx2+1:]
+        allgates.append(gates)
+    return allgates
+    
+
 def getBrainActivity(data, n_agents=1, n_trials=64, n_nodes=8, n_sensors=2,n_hidden=4,n_motors=2):
     '''
     Function for generating a activity matrices for the animats given outputs from mabe
