@@ -236,26 +236,23 @@ def remove_motor_sensor_effects(TPM,n_sensors=2,n_motors=2,n_nodes=4,states_conv
     TPM[:,0:n_sensors] = np.ones(np.shape(TPM[:,0:n_sensors]))/2.
 
     # converting TPM to multidimensional representation for easier calling
-    TPMmulti = pyphi.convert.to_multidimensional(TPM)
+    TPM_multi = pyphi.convert.to_multidimensional(TPM)
 
     # setting all output states to be identical to the state with motors being off (forcing the effect of motors to be null)
-    no_motor_holi, no_motor_loli = get_states(n_nodes-2)
-    no_motor_states = no_motor_holi if states_convention == 'holi' else no_motor_loli
-    motor_holi, motor_loli = get_states(n_motors)
-    motor_states = motor_holi if states_convention == 'holi' else motor_loli
 
-    newTPM = copy.deepcopy(TPM)
-    no_motor_activity = [0]*n_motors
+    no_motor_states = get_states(n_nodes-n_motors, states_convention)
+    motor_states = get_states(n_motors, states_convention)
+
     for state in no_motor_states:
         sensors = list(state[:n_sensors])
         hidden = list(state[n_sensors:])
-        for motor_state in motor_states:
+        full_state = tuple(sensors+list(motor_states[0,:])+hidden) # all motors off state
+        next_state = TPM_multi[full_state]
+        for motor_state in motor_states[1:]:
             full_state = tuple(sensors+list(motor_state)+hidden)
-            if all(motor_state == no_motor_activity):
-                out = TPMmulti[full_state]
-            TPMmulti[full_state] = out
+            TPM_multi[full_state] = next_state
 
-    TPM = pyphi.convert.to_2dimensional(TPMmulti)
+    TPM = pyphi.convert.to_2dimensional(TPM_multi)
     return TPM
 
 

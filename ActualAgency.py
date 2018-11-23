@@ -1,3 +1,4 @@
+
 import numpy as np
 import pandas as pd
 import subprocess as sp
@@ -10,6 +11,7 @@ import copy
 import pyphi
 from pathlib import Path
 import scipy.io as sio
+import networkx as nx
 
 
 ### MABE RELATED FUNCTIONS
@@ -207,10 +209,10 @@ def hist2d_2LODdata(x,LODdata1x,LODdata1y,LODdata2x,LODdata2y):
 def plot_knockout_brain(cm, state):
     n_nodes = cm.shape[0]
     state = np.array(state).astype(int)
-    pos = {'S1': (0,40), #'S2': (10, 40),
-       'A': (0, 30), 'B': (10, 30),
-       'C': (0, 20), 'D': (10, 20),
-      'M1': (0,10), 'M2': (10,10)}
+    pos = {'S1': (5,40), #'S2': (20, 40),
+       'A': (0, 30), 'B': (20, 30),
+       'C': (0, 20), 'D': (20, 20),
+      'M1': (5,10), 'M2': (15,10)}
 
     G = nx.from_numpy_matrix(cm, create_using=nx.DiGraph())
     labels = ['S1','M1','M2','A','B','C','D']
