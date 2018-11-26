@@ -6,8 +6,6 @@ import pyphi
 from pathlib import Path
 import scipy.io as sio
 
-# TEST
-
 def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='deterministic',states_convention='loli',remove_sensor_motor_effects=False):
     '''
     Extracts the TPM from the genome output by mabe.
