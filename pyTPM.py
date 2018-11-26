@@ -22,28 +22,30 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
             gate_TPMs: the TPM for each gate specified by the genome (which in turn specifies the full TPM)
             cm: Connectivity matrix (nodes x nodes) for the agent. 1's indicate there is a connection, 0's indicate the opposite
     '''
-    if gate_type=='deterministic':
-        max_gene_length = 300
-    elif gate_type=='decomposable':
-        max_gene_length = 400
-
     max_inputs = max_outputs = max_io = 4 # 4 inputs, 4 outputs per HMG
-    if gate_type == 'deterministic':
+
+    if gate_type=='deterministic':
+        # max_gene_length = 300
+        max_gene_length = 12 + (2**max_inputs)*max_outputs + 1 # = 77
         start_codon = 43
-    elif gate_type == 'decomposable':
+
+    elif gate_type=='decomposable':
+        # max_gene_length = 400
+        max_gene_length = 12 + (2**max_inputs)*max_outputs + (max_io**4) + 1
+        12 + row * n_outputs + (max_io**4)
         start_codon = 50
+
     else:
         raise AttributeError("Unknown gate type.")
 
-    print('Reading genome...')
+    # print('Reading genome...')
     ixs = np.where(genome==start_codon)[0]
     # making sure start codon is not the last codon
-    if np.max(ixs)==len(genome)-1:
-        ixs = ixs[:-1]
+    ixs = [ix for ix in ixs if ix+1<len(genome)]
 
     gene_ixs = [ix for ix in ixs if genome[ix+1]==255-start_codon]
 
-    print(gene_ixs)
+    gene_ixs = [ix for ix in gene_ixs if ix + max_gene_length <= len(genome)] # genome is finite (even though genomeType=Circular)
 
     genes = np.array([genome[ix:ix+max_gene_length] for ix in gene_ixs])
     n_genes = genes.shape[0]
@@ -63,7 +65,7 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
     gate_TPMs = []
 
     for i, gene in zip(range(n_genes),genes):
-        print('Gene: {}/{}'.format(i+1,n_genes))
+        # print('Gene: {}/{}'.format(i+1,n_genes))
 
         # Get gate's inputs and outputs
         n_inputs = gene[2] % max_inputs + 1
@@ -76,20 +78,19 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
         # Get probabilities
         gate_TPM = np.zeros((2**n_inputs,n_outputs))
         for row in range(2**n_inputs):
-
             if start_codon == 50: # Decomposable
                 start_locus = 12 + row * n_outputs + (max_io**4)
                 raw_probability = gene[start_locus:start_locus+n_outputs]
                 gate_TPM[row,:] = raw_probability/256 # or 255?
 
             else: # start_codon == 43 (Deterministic)
-                start_locus = 12 + row * max_inputs # 12 or 13?
+                start_locus = 12 + row * max_outputs
                 raw_probability = gene[start_locus:start_locus+n_outputs]
                 gate_TPM[row,:] = raw_probability % 2
 
         # Reduce gate's degenerate outputs (if there are)
         gate_TPM, outputs = reduce_degenerate_outputs(gate_TPM, outputs)
-        gate_TPM, inputs = reduce_degenerate_inputs(gate_TPM, inputs, states_convention)
+        gate_TPM, inputs  = reduce_degenerate_inputs(gate_TPM, inputs, states_convention)
 
         gate_TPMs.append({'type': gate_type,
                           'ins': inputs,
@@ -108,16 +109,16 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
         TPM = remove_motor_sensor_effects(TPM,n_sensors,n_motors,n_nodes)
         cm = remove_motor_sensor_connections(cm,n_sensors,n_motors)
 
-    print('Done.')
+    # print('Done.')
     return TPM, gate_TPMs, cm
-    
+
 def gates2TPM(gates,n_nodes,states_convention='loli',remove_sensor_motor_effects=False):
     '''
     Extracts the TPM from the genome output by mabe.
         Inputs:
 
         Outputs:
-        
+
     '''
     n_gates = len(gates)
     cm = np.zeros((n_nodes,n_nodes))
@@ -128,7 +129,7 @@ def gates2TPM(gates,n_nodes,states_convention='loli',remove_sensor_motor_effects
         # Get gate's inputs and outputs
         inputs = gate['ins']
         outputs = gate['outs']
-        
+
         # Get list of all possible states from nodes
         cm[np.ix_(inputs,outputs)] = 1
 
@@ -136,7 +137,7 @@ def gates2TPM(gates,n_nodes,states_convention='loli',remove_sensor_motor_effects
         gate_TPM = np.array(gate['logic'])
         gate_TPM, outputs = reduce_degenerate_outputs(gate_TPM, outputs)
         gate_TPM, inputs = reduce_degenerate_inputs(gate_TPM, inputs, states_convention)
-        
+
         gate_TPMs.append({'type': gate['type'],
                           'ins': inputs,
                           'outs': outputs,
@@ -211,13 +212,14 @@ def reduce_degenerate_inputs(gate_TPM, inputs, states_convention):
             unique_inputs: IDs of unique inputs to the gate (1 x nodes)
             '''
     # Find degenerate outputs
+    inputs = np.array(inputs)
     unique_inputs = np.unique(inputs)
     unique_ixs = []
 
     if len(unique_inputs)==len(inputs):
         return gate_TPM, inputs
 
-    delete_row = []
+
     for e in unique_inputs:
         ixs = list(np.where(inputs==e)[0])
         unique_ixs.append(ixs)
@@ -226,19 +228,33 @@ def reduce_degenerate_inputs(gate_TPM, inputs, states_convention):
     input_states = get_states(len(inputs),convention=states_convention)
 
     # finding states where same node gives different values
+    keepcols_ixs = [ixs[0] for ixs in unique_ixs]
+    keepcols_ixs = np.sort(keepcols_ixs)
+    delete_row = []
     for ixs in unique_ixs:
         # check for duplicates
         if len(ixs)>1:
             # run through all states
-            for i in list(range(0,len(input_states))):
+
+            for i in list(range(len(input_states))):
                 state = input_states[i,ixs]
                 # check if activity of all duplicates match
                 if not ((np.sum(state) == len(state)) or (np.sum(state) == 0)):
                     # remove row when they do not match
                     delete_row.append(i)
     reduced_gate_TPM = np.delete(gate_TPM,(delete_row),axis=0)
-    return reduced_gate_TPM, unique_inputs
+    # Reorder rows after deletion of degenerate inputs
+    input_states = np.delete(input_states, (delete_row),axis=0)
+    input_states = input_states[:,keepcols_ixs]
+    ixs = []
+    for state in input_states:
+        ixs.append(pyphi.convert.s2l(state))
+    ixs_order = np.argsort(ixs)
 
+    final_gate_TPM = reduced_gate_TPM[ixs_order,:]
+    final_inputs = inputs[keepcols_ixs]
+
+    return final_gate_TPM, final_inputs
 
 def expand_gate_TPM(gate_TPM, inputs, outputs, n_nodes, states_convention):
     '''
@@ -266,6 +282,8 @@ def expand_gate_TPM(gate_TPM, inputs, outputs, n_nodes, states_convention):
 
 def remove_motor_sensor_effects(TPM,n_sensors=2,n_motors=2,n_nodes=4,states_convention = 'loli'):
     '''
+        Removes effects of hidden and motor neurons on sensors (sensors always transition to 0s in next state) and removing
+        feedback of motor to hidden neurons (hidden neuron states are conditionally independent on motors states in t-1).
 
         Inputs:
 
@@ -294,7 +312,6 @@ def remove_motor_sensor_effects(TPM,n_sensors=2,n_motors=2,n_nodes=4,states_conv
 
     TPM = pyphi.convert.to_2dimensional(TPM_multi)
     return TPM
-
 
 def remove_motor_sensor_connections(cm,n_sensors=2,n_motors=2):
     '''
