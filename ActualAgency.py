@@ -233,7 +233,7 @@ def plot_2LODdata_and_Bootstrap(x,LODdata1,LODdata2):
     return fig
 
 
-def hist2d_2LODdata(x,LODdata1x,LODdata1y,LODdata2x,LODdata2y):
+def hist2d_2LODdata(LODdata1x,LODdata1y,LODdata2x,LODdata2y, nbins=20):
     '''
     Function for doing bootstrap resampling of the mean for a 2D data matrix.
         Inputs:
@@ -247,8 +247,8 @@ def hist2d_2LODdata(x,LODdata1x,LODdata1y,LODdata2x,LODdata2y):
     ymin = np.min((np.min(LODdata1y),np.min(LODdata2y)))
     ymax = np.max((np.max(LODdata1y),np.max(LODdata2y)))
 
-    xbins = np.linspace(xmin,xmax,20)
-    ybins = np.linspace(ymin,ymax,20)
+    xbins = np.linspace(xmin,xmax,nbins)
+    ybins = np.linspace(ymin,ymax,nbins)
     plt.figure()
     plt.subplot(121)
     plt.hist2d(np.ravel(LODdata1x),np.ravel(LODdata1y),[xbins,ybins],norm=mpl.colors.LogNorm())
@@ -257,32 +257,58 @@ def hist2d_2LODdata(x,LODdata1x,LODdata1y,LODdata2x,LODdata2y):
 
 
 ### OTHER FUNCTIONS
-
-def plot_knockout_brain(cm, state):
+def plot_brain(cm, state=None, ax=None):
     n_nodes = cm.shape[0]
-    state = np.array(state).astype(int)
-    pos = {'S1': (5,40), #'S2': (20, 40),
-       'A': (0, 30), 'B': (20, 30),
-       'C': (0, 20), 'D': (20, 20),
-      'M1': (5,10), 'M2': (15,10)}
+    if n_nodes==7:
+        labels = ['S1','M1','M2','A','B','C','D']
+        pos = {'S1': (5,40), #'S2': (20, 40),
+           'A': (0, 30), 'B': (20, 30),
+           'C': (0, 20), 'D': (20, 20),
+          'M1': (5,10), 'M2': (15,10)}
+        nodetype = (0,1,1,2,2,2,2)
+
+        ini_hidden = 3
+
+    elif n_nodes==8:
+        labels = ['S1','S2','M1','M2','A','B','C','D']
+        pos = {'S1': (5,40), 'S2': (15, 40),
+           'A': (0, 30), 'B': (20, 30),
+           'C': (0, 20), 'D': (20, 20),
+          'M1': (5,10), 'M2': (15,10)}
+        nodetype = (0,0,1,1,2,2,2,2)
+        ini_hidden = 4
+
+    state = [1]*n_nodes if state==None else state
 
     G = nx.from_numpy_matrix(cm, create_using=nx.DiGraph())
-    labels = ['S1','M1','M2','A','B','C','D']
-    mapping = {key:x for key,x in zip(range(7),labels)}
+
+    mapping = {key:x for key,x in zip(range(n_nodes),labels)}
     G = nx.relabel_nodes(G, mapping)
 
-    blue_on, red_on, green_on, grey_on = '#77b3f9', '#f98e81', '#8abf69', '#adadad'
+    blue, red, green, grey, white = '#77b3f9', '#f98e81', '#8abf69', '#adadad', '#ffffff'
     blue_off, red_off, green_off, grey_off = '#e8f0ff','#ffe9e8', '#f0ffe8', '#f2f2f2'
-    colors = np.array([[red_off,blue_off,green_off, grey_off],[red_on,blue_on,green_on, grey_on]])
-    nodetype = (0,1,1,2,2,2,2)
+
+    colors = np.array([red, blue, green, grey, white])
+    colors = np.array([[red_off,blue_off,green_off, grey_off, white],
+                       [red,blue,green, grey, white]])
 
     node_colors = [colors[state[i],nodetype[i]] for i in range(n_nodes)]
-    # Grey isolate nodes
-#     isolates = [x for x in nx.isolates(G)]
-#     node_colors = [node_colors[i] if labels[i] not in isolates else colors[state[i],3] for i in range(len(G.nodes))]
+    # Grey Uneffective or unaffected nodes
+    cm_temp = copy.copy(cm)
+    cm_temp[range(n_nodes),range(n_nodes)]=0
+    unaffected = np.where(np.sum(cm_temp,axis=0)==0)[0]
+    uneffective = np.where(np.sum(cm_temp,axis=1)==0)[0]
+    noeffect = list(set(unaffected).union(set(uneffective)))
+    noeffect = [ix for ix in noeffect if ix in range(ini_hidden,ini_hidden+4)]
+    node_colors = [node_colors[i] if i not in noeffect else colors[state[i],3] for i in range(len(G.nodes))]
+
+    #   White isolate nodes
+    isolates = [x for x in nx.isolates(G)]
+    node_colors = [node_colors[i] if labels[i] not in isolates else colors[0,4] for i in range(len(G.nodes))]
+
     self_nodes = [labels[i] for i in range(n_nodes) if cm[i,i]==1]
-    linewidths = [2 if labels[i] in self_nodes else 1 for i in range(n_nodes)]
+    linewidths = [2.5 if labels[i] in self_nodes else 1 for i in range(n_nodes)]
 
 #     fig, ax = plt.subplots(1,1, figsize=(4,6))
-    nx.draw(G, with_labels=True, node_size=1000, node_color=node_colors,
-    edgecolors='#000000', linewidths=linewidths, pos=pos)
+    nx.draw(G, with_labels=True, node_size=800, node_color=node_colors,
+    edgecolors='#000000', linewidths=linewidths, pos=pos, ax=ax)
