@@ -268,24 +268,32 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
         motor_avoid.append(motor_avoid_LOD)
         transitions_avoid.append(transitions_avoid_LOD)    
 
-
     purview = []
     alpha = []
     motor = []
+    catch = []
     transitions = []
+    lod_aux = []
+    agent_aux = []
     s1 = []
     s2 = []
     h1 = []
     h2 = []
     h3 = []
     h4 = []
-    catch = []
 
     idx = 0
 
-    for lod in LODS:
-        for agent in agents: 
+    for lod in list(range(0,len(LODS))):
+        for agent in list(range(0,len(agents))): 
             for i in list(range(len(purview_catch[lod][agent]))):
+                
+                motor.append(np.sum([ii*(2**idx) for ii,idx in zip(motor_catch[lod][agent][i],list(range(0,len(motor_catch[lod][agent][i]))))]))
+                catch.append(1)
+                transitions.append(transitions_catch[lod][agent][i])
+                lod_aux.append(lod)
+                agent_aux.append(agent)
+                    
                 if purview_catch[lod][agent][i] is not None:
                     purview.append([labs_2sensor[ii] for ii in purview_catch[lod][agent][i]])
                     s1.append(1 if 's1' in purview[idx] else 0)
@@ -295,8 +303,6 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
                     h3.append(1 if 'h3' in purview[idx] else 0)
                     h4.append(1 if 'h4' in purview[idx] else 0)
                     alpha.append(alpha_catch[lod][agent][i])
-                    motor.append(np.sum([ii*(2**idx) for ii,idx in zip(motor_catch[lod][agent][i],list(range(0,len(motor_catch[lod][agent][i]))))]))
-                    catch.append(1)
                     idx+=1
 
                 else:
@@ -308,13 +314,16 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
                     h2.append(0)
                     h3.append(0)
                     h4.append(0)
-                    motor.append(np.sum([ii*(2**idx) for ii,idx in zip(motor_catch[lod][agent][i],list(range(0,len(motor_catch[lod][agent][i]))))]))
-                    catch.append(1)
                     idx+=1
 
-
-
             for i in list(range(len(purview_avoid[lod][agent]))):
+                
+                motor.append(np.sum([ii*(2**idx) for ii,idx in zip(motor_avoid[lod][agent][i],list(range(0,len(motor_avoid[lod][agent][i]))))]))
+                catch.append(0)
+                transitions.append(transitions_avoid[lod][agent][i])
+                lod_aux.append(lod)
+                agent_aux.append(agent)
+                    
                 if purview_avoid[lod][agent][i] is not None:
                     purview.append([labs_2sensor[ii] for ii in purview_avoid[lod][agent][i]])
                     s1.append(1 if 's1' in purview[idx] else 0)
@@ -324,8 +333,6 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
                     h3.append(1 if 'h3' in purview[idx] else 0)
                     h4.append(1 if 'h4' in purview[idx] else 0)
                     alpha.append(alpha_avoid[lod][agent][i])
-                    motor.append(np.sum([ii*(2**idx) for ii,idx in zip(motor_avoid[lod][agent][i],list(range(0,len(motor_avoid[lod][agent][i]))))]))
-                    catch.append(0)
                     idx+=1
 
                 else:
@@ -337,13 +344,10 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
                     h2.append(0)
                     h3.append(0)
                     h4.append(0)
-                    motor.append(np.sum([ii*(2**idx) for ii,idx in zip(motor_avoid[lod][agent][i],list(range(0,len(motor_avoid[lod][agent][i]))))]))
-                    catch.append(0)
                     idx+=1
 
-
-
     dictforpd = {'purview':purview,
+                    'motor':motor,
                     'alpha':alpha,
                     's1':s1,
                     's2':s2,
@@ -352,7 +356,10 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
                     'h3':h3,
                     'h4':h4,
                     'motor':motor,
-                 'catch': catch,
+                    'catch': catch,
+                    'transition': transitions,
+                    'LOD': lod_aux,
+                    'agent': agent_aux,
                     }  
 
     panda = pd.DataFrame(dictforpd)
