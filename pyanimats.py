@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 import os
 import copy
+import pyphi
 
 class Animat:
     def __init__(self, params):
@@ -52,12 +53,57 @@ class Animat:
         print('Done.')
         return brain_activity
 
+    def get_transition(self, trial, t, trim=False):
+        if not hasattr(self, 'brain_activity'):
+            raise AttributeError('No brain activity saved yet.')
+        if t >= self.brain_activity.shape[1]-1:
+            raise IndexError('Last time step given, no transition here.')
+
+        if trim:
+            before_state_ixs = [0,1,4,5,6,7] if self.n_nodes==8 else [0,3,4,5,6]
+            after_state_ixs  = [2,3,4,5,6,7] if self.n_nodes==8 else [1,2,3,4,5,6]
+            return tuple(self.brain_activity[trial, t, before_state_ixs]), tuple(self.brain_activity[trial, t+1, after_state_ixs])
+        else:
+            return tuple(self.brain_activity[trial, t]), tuple(self.brain_activity[trial, t+1])
+
+    def get_unique_transitions(self, trial=None, deterministic=True):
+        if not hasattr(self, 'brain_activity'):
+            raise AttributeError('No brain activity saved yet.')
+
+        if trial==None:
+            n_trials = self.brain_activity.shape[0]
+            n_times = self.brain_activity.shape[1]
+            unique_transitions = []
+            times = []
+            for trial in range(n_trials):
+                for t in range(n_times-1):
+                    transition = self.get_transition(trial, t, trim=True)
+                    if transition not in unique_transitions:
+                        unique_transitions.append(transition)
+                        times.append(t)
+        else:
+            n_times = self.brain_activity.shape[1]
+            unique_transitions = []
+            times = []
+            for t in range(n_times-1):
+                transition = self.get_transition(trial, t, trim=True)
+                if transition not in unique_transitions:
+                    unique_transitions.append(transition)
+                    times.append(t)
+        return unique_transitions, times
+
     def saveBrainActivity(self, brain_activity):
         if type(brain_activity)==pd.core.frame.DataFrame:
             self.brain_activity = self._getBrainActivity(brain_activity)
         else: ## array
             assert brain_activity.shape[2]==self.n_nodes, "Brain history does not match number of nodes = {}".format(self.n_nodes)
             self.brain_activity = np.array(brain_activity)
+
+    def saveBrain(self, TPM, cm):
+        if self.n_nodes==8 and self.n_sensors==2:
+            node_labels = ['S1','S2','M1','M2','A','B','C','D']
+            network = pyphi.Network(TPM, cm, node_labels=node_labels)
+            self.brain = network
 
     def getMotorActivity(self, trial):
         motor_states = self.brain_activity[trial,:,self.n_sensors:self.n_sensors+2]

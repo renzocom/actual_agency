@@ -12,6 +12,7 @@ import pyphi
 from pathlib import Path
 import scipy.io as sio
 import networkx as nx
+from scipy.stats import kde
 
 
 ### MABE RELATED FUNCTIONS
@@ -312,3 +313,31 @@ def plot_brain(cm, state=None, ax=None):
 #     fig, ax = plt.subplots(1,1, figsize=(4,6))
     nx.draw(G, with_labels=True, node_size=800, node_color=node_colors,
     edgecolors='#000000', linewidths=linewidths, pos=pos, ax=ax)
+
+def plot_mean_sem(x, y, yerr, color, label=None, linestyle=None):
+    plt.fill_between(x, y-yerr, y+yerr, color=color, alpha=0.1)
+    plt.plot(x, y, label=label, color=color, linestyle=linestyle)
+
+
+def plot_2Ddensity(x,y, plot_samples=True, cmap=plt.cm.Blues, color=None, markersize=0.7):
+    data = np.c_[x,y]
+    k = kde.gaussian_kde(data.T)
+    nbins = 20
+    xi, yi = np.mgrid[x.min():x.max():nbins*1j, y.min():y.max():nbins*1j]
+    zi = k(np.vstack([xi.flatten(), yi.flatten()]))
+    zi = k(np.vstack([xi.flatten(), yi.flatten()]))
+    plt.pcolormesh(xi, yi, zi.reshape(xi.shape), cmap=cmap)
+
+    plt.plot(x,y,'.', color=color, markersize=markersize)
+
+def state_str(state):
+    if len(state)==8:
+        s = '{}|{}|{}'.format(state[:2],state[2:4],state[4:])
+    return s
+
+def print_state(state):
+    print('   S      M        H\n' + state_str(state))
+
+def print_transition(transition):
+    state1, state2 = transition
+    print('   S      M        H                S     M        H\n' + state_str(state1)+' ━━▶',state_str(state2))
