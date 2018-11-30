@@ -153,34 +153,34 @@ def get_occurrences(activityData,numSensors,numHidden,numMotors):
 
     return x, y
 
-    
-def AnalyzeTransitions(network, activity, cause_indices=[0,1,4,5,6,7], effect_indices=[2,3], 
+
+def AnalyzeTransitions(network, activity, cause_indices=[0,1,4,5,6,7], effect_indices=[2,3],
                        sensor_indices=[0,1], motor_indices=[2,3],
                        purview = [],alpha = [],motorstate = [],transitions = []):
-    
+
     states = len(activity)
     n_nodes = len(activity[0])
     x_indices = [i for i in range(n_nodes) if i not in motor_indices]
     y_indices = [i for i in range(n_nodes) if i not in sensor_indices]
-    
+
     if len(transitions)>0:
         tran = [np.append(transitions[i][0][x_indices],transitions[i][1][y_indices]) for i in list(range(0,len(transitions)))]
     else:
         tran = []
-        
+
     for s in list(range(states-1)):
         # 2 sensors
         x = activity[s,:].copy()
         x[motor_indices] = [0]*len(motor_indices)
         y = activity[s+1,:].copy()
         y[sensor_indices] = [0]*len(sensor_indices)
-        
+
         occurence = np.append(x[x_indices],y[y_indices]).tolist()
 
         # checking if this transition has never happened before for this agent
         if not any([occurence == t.tolist() for t in tran]):
             # generating a transition
-            transition = pyphi.actual.Transition(network, x, y, cause_indices, 
+            transition = pyphi.actual.Transition(network, x, y, cause_indices,
                 effect_indices, cut=None, noise_background=False)
             CL = transition.find_causal_link(pyphi.Direction.CAUSE, tuple(effect_indices), purviews=False, allow_neg=False)
 
@@ -191,7 +191,7 @@ def AnalyzeTransitions(network, activity, cause_indices=[0,1,4,5,6,7], effect_in
             # avoiding recalculating the same occurence twice
             tran.append(np.array(occurence))
             transitions.append([np.array(x),np.array(y)])
-            
+
     return purview, alpha, motorstate, transitions
 
 def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
@@ -219,7 +219,7 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
         motor_avoid_LOD = []
         transitions_avoid_LOD = []
 
-        for agent in agents: 
+        for agent in agents:
             print('LOD: {} out of {}'.format(lod,np.max(LODS)))
             print('agent: {} out of {}'.format(agent,np.max(agents)))
             purview_catch_agent = []
@@ -241,12 +241,12 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
             for t in catch:
                 purview_catch_agent, alpha_catch_agent, motor_catch_agent, transitions_catch_agent = AnalyzeTransitions(
                     network_2sensor, np.squeeze(activity[lod,agent,t,:,:]),
-                    purview = purview_catch_agent, alpha = alpha_catch_agent, 
+                    purview = purview_catch_agent, alpha = alpha_catch_agent,
                     motorstate = motor_catch_agent, transitions=transitions_catch_agent)
             for t in avoid:
                 purview_avoid_agent, alpha_avoid_agent, motor_avoid_agent, transitions_avoid_agent = AnalyzeTransitions(
                     network_2sensor, np.squeeze(activity[lod,agent,t,:,:]),
-                    purview = purview_avoid_agent, alpha = alpha_avoid_agent, 
+                    purview = purview_avoid_agent, alpha = alpha_avoid_agent,
                     motorstate = motor_avoid_agent, transitions=transitions_avoid_agent)
 
             purview_catch_LOD.append(purview_catch_agent)
@@ -257,7 +257,7 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
             purview_avoid_LOD.append(purview_avoid_agent)
             alpha_avoid_LOD.append(alpha_avoid_agent)
             motor_avoid_LOD.append(motor_avoid_agent)
-            transitions_avoid_LOD.append(transitions_avoid_agent)  
+            transitions_avoid_LOD.append(transitions_avoid_agent)
 
         purview_catch.append(purview_catch_LOD)
         alpha_catch.append(alpha_catch_LOD)
@@ -267,7 +267,7 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
         purview_avoid.append(purview_avoid_LOD)
         alpha_avoid.append(alpha_avoid_LOD)
         motor_avoid.append(motor_avoid_LOD)
-        transitions_avoid.append(transitions_avoid_LOD)    
+        transitions_avoid.append(transitions_avoid_LOD)
 
     purview = []
     alpha = []
@@ -286,15 +286,15 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
     idx = 0
 
     for lod in list(range(0,len(LODS))):
-        for agent in list(range(0,len(agents))): 
+        for agent in list(range(0,len(agents))):
             for i in list(range(len(purview_catch[lod][agent]))):
-                
+
                 motor.append(np.sum([ii*(2**idx) for ii,idx in zip(motor_catch[lod][agent][i],list(range(0,len(motor_catch[lod][agent][i]))))]))
                 catch.append(1)
                 transitions.append(transitions_catch[lod][agent][i])
                 lod_aux.append(lod)
                 agent_aux.append(agent)
-                    
+
                 if purview_catch[lod][agent][i] is not None:
                     purview.append([labs_2sensor[ii] for ii in purview_catch[lod][agent][i]])
                     s1.append(1 if 's1' in purview[idx] else 0)
@@ -307,7 +307,7 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
                     idx+=1
 
                 else:
-                    purview.append('none') 
+                    purview.append('none')
                     alpha.append(alpha_catch[lod][agent][i])
                     s1.append(0)
                     s2.append(0)
@@ -318,13 +318,13 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
                     idx+=1
 
             for i in list(range(len(purview_avoid[lod][agent]))):
-                
+
                 motor.append(np.sum([ii*(2**idx) for ii,idx in zip(motor_avoid[lod][agent][i],list(range(0,len(motor_avoid[lod][agent][i]))))]))
                 catch.append(0)
                 transitions.append(transitions_avoid[lod][agent][i])
                 lod_aux.append(lod)
                 agent_aux.append(agent)
-                    
+
                 if purview_avoid[lod][agent][i] is not None:
                     purview.append([labs_2sensor[ii] for ii in purview_avoid[lod][agent][i]])
                     s1.append(1 if 's1' in purview[idx] else 0)
@@ -337,7 +337,7 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
                     idx+=1
 
                 else:
-                    purview.append('none') 
+                    purview.append('none')
                     alpha.append(alpha_avoid[lod][agent][i])
                     s1.append(0)
                     s2.append(0)
@@ -361,12 +361,12 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
                     'transition': transitions,
                     'LOD': lod_aux,
                     'agent': agent_aux,
-                    }  
+                    }
 
     panda = pd.DataFrame(dictforpd)
-    
+
     return panda
-    
+
 
 ### DATA ANALYSIS FUNCTIONS
 

@@ -66,31 +66,26 @@ class Animat:
         else:
             return tuple(self.brain_activity[trial, t]), tuple(self.brain_activity[trial, t+1])
 
-    def get_unique_transitions(self, trial=None, deterministic=True):
+    def get_unique_transitions(self, trial=None, trim=True):
         if not hasattr(self, 'brain_activity'):
             raise AttributeError('No brain activity saved yet.')
 
-        if trial==None:
-            n_trials = self.brain_activity.shape[0]
-            n_times = self.brain_activity.shape[1]
-            unique_transitions = []
-            times = []
-            for trial in range(n_trials):
-                for t in range(n_times-1):
-                    transition = self.get_transition(trial, t, trim=True)
-                    if transition not in unique_transitions:
-                        unique_transitions.append(transition)
-                        times.append(t)
-        else:
-            n_times = self.brain_activity.shape[1]
-            unique_transitions = []
-            times = []
+        n_trials = self.brain_activity.shape[0]
+        n_times = self.brain_activity.shape[1]
+
+        trials = range(n_trials) if trial==None else [trial]
+
+        unique_transitions = []
+        unique_ids = []
+        for trial in trials:
             for t in range(n_times-1):
                 transition = self.get_transition(trial, t, trim=True)
                 if transition not in unique_transitions:
                     unique_transitions.append(transition)
-                    times.append(t)
-        return unique_transitions, times
+                    unique_ids.append((trial, t))
+        if not trim:
+            unique_transitions = [self.get_transition(trial, t, trim=False) for trial,t in unique_ids]
+        return unique_transitions, unique_ids
 
     def saveBrainActivity(self, brain_activity):
         if type(brain_activity)==pd.core.frame.DataFrame:
@@ -104,6 +99,12 @@ class Animat:
             node_labels = ['S1','S2','M1','M2','A','B','C','D']
             network = pyphi.Network(TPM, cm, node_labels=node_labels)
             self.brain = network
+        elif self.n_nodes==7 and self.n_sensors==1:
+            node_labels = ['S1','M1','M2','A','B','C','D']
+            network = pyphi.Network(TPM, cm, node_labels=node_labels)
+            self.brain = network
+        else:
+            print('Problem saving brain.')
 
     def getMotorActivity(self, trial):
         motor_states = self.brain_activity[trial,:,self.n_sensors:self.n_sensors+2]
