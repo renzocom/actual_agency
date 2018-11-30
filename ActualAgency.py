@@ -154,6 +154,7 @@ def get_occurrences(activityData,numSensors,numHidden,numMotors):
     return x, y
 
     
+
 def AnalyzeTransitions(network, activity, cause_indices=[0,1,4,5,6,7], effect_indices=[2,3], 
                        sensor_indices=[0,1], motor_indices=[2,3],
                        purview = [],alpha = [],motorstate = [],transitions = [], account = []):
@@ -198,7 +199,9 @@ def AnalyzeTransitions(network, activity, cause_indices=[0,1,4,5,6,7], effect_in
             
     return purview, alpha, motorstate, transitions, account
 
-def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
+def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs,
+                               cause_indices=[0,1,4,5,6,7], effect_indices=[2,3], 
+                               sensor_indices=[0,1], motor_indices=[2,3]):
     
     catch = []
     purview = []
@@ -235,7 +238,9 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
                 purview_agent, alpha_agent, motor_agent, transitions_agent, account_agent = AnalyzeTransitions(
                     network_2sensor, np.squeeze(activity[lod,agent,t,:,:]),
                     purview = purview_agent, alpha = alpha_agent, account = account_agent,
-                    motorstate = motor_agent, transitions=transitions_agent)
+                    motorstate = motor_agent, transitions=transitions_agent,
+                    cause_indices=cause_indices, effect_indices=effect_indices, 
+                    sensor_indices=sensor_indices, motor_indices=motor_indices)
                 catch_agent.append(1) if t<32 else catch.append(0)
 
             purview_LOD.append(purview_agent)
