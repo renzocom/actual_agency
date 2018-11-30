@@ -154,9 +154,10 @@ def get_occurrences(activityData,numSensors,numHidden,numMotors):
     return x, y
 
 
+
 def AnalyzeTransitions(network, activity, cause_indices=[0,1,4,5,6,7], effect_indices=[2,3],
                        sensor_indices=[0,1], motor_indices=[2,3],
-                       purview = [],alpha = [],motorstate = [],transitions = []):
+                       purview = [],alpha = [],motorstate = [],transitions = [], account = []):
 
     states = len(activity)
     n_nodes = len(activity[0])
@@ -183,54 +184,49 @@ def AnalyzeTransitions(network, activity, cause_indices=[0,1,4,5,6,7], effect_in
             transition = pyphi.actual.Transition(network, x, y, cause_indices,
                 effect_indices, cut=None, noise_background=False)
             CL = transition.find_causal_link(pyphi.Direction.CAUSE, tuple(effect_indices), purviews=False, allow_neg=False)
+            AA = pyphi.actual.account(transition,pyphi.Direction.CAUSE)
+
 
             alpha.append(CL.alpha)
             purview.append(CL.purview)
             motorstate.append(tuple(y[motor_indices]))
+            account.append(AA)
+
 
             # avoiding recalculating the same occurence twice
             tran.append(np.array(occurence))
             transitions.append([np.array(x),np.array(y)])
 
-    return purview, alpha, motorstate, transitions
+    return purview, alpha, motorstate, transitions, account
 
-def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
-    catch = list(range(0,31))
-    avoid = list(range(32,64))
+def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs,
+                               cause_indices=[0,1,4,5,6,7], effect_indices=[2,3],
+                               sensor_indices=[0,1], motor_indices=[2,3]):
 
-    purview_catch = []
-    alpha_catch = []
-    motor_catch = []
-    transitions_catch = []
-
-    purview_avoid = []
-    alpha_avoid = []
-    motor_avoid = []
-    transitions_avoid = []
+    catch = []
+    purview = []
+    alpha = []
+    motor = []
+    transitions = []
+    account = []
 
     for lod in LODS:
-        purview_catch_LOD = []
-        alpha_catch_LOD = []
-        motor_catch_LOD = []
-        transitions_catch_LOD = []
-
-        purview_avoid_LOD = []
-        alpha_avoid_LOD = []
-        motor_avoid_LOD = []
-        transitions_avoid_LOD = []
+        purview_LOD = []
+        alpha_LOD = []
+        motor_LOD = []
+        transitions_LOD = []
+        account_LOD = []
+        catch_LOD = []
 
         for agent in agents:
             print('LOD: {} out of {}'.format(lod,np.max(LODS)))
             print('agent: {} out of {}'.format(agent,np.max(agents)))
-            purview_catch_agent = []
-            alpha_catch_agent = []
-            motor_catch_agent = []
-            transitions_catch_agent = []
-
-            purview_avoid_agent = []
-            alpha_avoid_agent = []
-            motor_avoid_agent = []
-            transitions_avoid_agent = []
+            purview_agent = []
+            alpha_agent = []
+            motor_agent = []
+            transitions_agent = []
+            account_agent = []
+            catch_agent = []
 
             tr = []
             TPM = np.squeeze(TPMs[lod,agent,:,:])
@@ -238,77 +234,74 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
             TPMmd = pyphi.convert.to_multidimensional(TPM)
             network_2sensor = pyphi.Network(TPMmd, cm=CM, node_labels=labs)
 
-            for t in catch:
-                purview_catch_agent, alpha_catch_agent, motor_catch_agent, transitions_catch_agent = AnalyzeTransitions(
+            for t in range(64):
+                purview_agent, alpha_agent, motor_agent, transitions_agent, account_agent = AnalyzeTransitions(
                     network_2sensor, np.squeeze(activity[lod,agent,t,:,:]),
-                    purview = purview_catch_agent, alpha = alpha_catch_agent,
-                    motorstate = motor_catch_agent, transitions=transitions_catch_agent)
-            for t in avoid:
-                purview_avoid_agent, alpha_avoid_agent, motor_avoid_agent, transitions_avoid_agent = AnalyzeTransitions(
-                    network_2sensor, np.squeeze(activity[lod,agent,t,:,:]),
-                    purview = purview_avoid_agent, alpha = alpha_avoid_agent,
-                    motorstate = motor_avoid_agent, transitions=transitions_avoid_agent)
+                    purview = purview_agent, alpha = alpha_agent, account = account_agent,
+                    motorstate = motor_agent, transitions=transitions_agent,
+                    cause_indices=cause_indices, effect_indices=effect_indices,
+                    sensor_indices=sensor_indices, motor_indices=motor_indices)
+                catch_agent.append(1) if t<32 else catch.append(0)
 
-            purview_catch_LOD.append(purview_catch_agent)
-            alpha_catch_LOD.append(alpha_catch_agent)
-            motor_catch_LOD.append(motor_catch_agent)
-            transitions_catch_LOD.append(transitions_catch_agent)
+            purview_LOD.append(purview_agent)
+            alpha_LOD.append(alpha_agent)
+            motor_LOD.append(motor_agent)
+            transitions_LOD.append(transitions_agent)
+            account_LOD.append(account_agent)
+            catch_LOD.append(catch_agent)
 
-            purview_avoid_LOD.append(purview_avoid_agent)
-            alpha_avoid_LOD.append(alpha_avoid_agent)
-            motor_avoid_LOD.append(motor_avoid_agent)
-            transitions_avoid_LOD.append(transitions_avoid_agent)
 
-        purview_catch.append(purview_catch_LOD)
-        alpha_catch.append(alpha_catch_LOD)
-        motor_catch.append(motor_catch_LOD)
-        transitions_catch.append(transitions_catch_LOD)
+        purview.append(purview_LOD)
+        alpha.append(alpha_LOD)
+        motor.append(motor_LOD)
+        transitions.append(transitions_LOD)
+        account.append(account_LOD)
+        catch.append(catch_LOD)
 
-        purview_avoid.append(purview_avoid_LOD)
-        alpha_avoid.append(alpha_avoid_LOD)
-        motor_avoid.append(motor_avoid_LOD)
-        transitions_avoid.append(transitions_avoid_LOD)
-
-    purview = []
-    alpha = []
-    motor = []
-    catch = []
-    transitions = []
+    purview_aux = []
+    alpha_aux = []
+    motor_aux = []
+    transitions_aux = []
+    account_aux = []
     lod_aux = []
     agent_aux = []
+    catch_aux = []
     s1 = []
     s2 = []
     h1 = []
     h2 = []
     h3 = []
     h4 = []
+    hiddenInPurview = []
+    sensorsInPurview = []
 
     idx = 0
 
     for lod in list(range(0,len(LODS))):
         for agent in list(range(0,len(agents))):
-            for i in list(range(len(purview_catch[lod][agent]))):
+            for i in list(range(len(purview[lod][agent]))):
 
-                motor.append(np.sum([ii*(2**idx) for ii,idx in zip(motor_catch[lod][agent][i],list(range(0,len(motor_catch[lod][agent][i]))))]))
-                catch.append(1)
-                transitions.append(transitions_catch[lod][agent][i])
+                motor_aux.append(np.sum([ii*(2**idx) for ii,idx in zip(motor[lod][agent][i],list(range(0,len(motor[lod][agent][i]))))]))
+                transitions_aux.append(transitions[lod][agent][i])
+                account_aux.append(account[lod][agent][i])
                 lod_aux.append(lod)
                 agent_aux.append(agent)
+                catch_aux.append(catch)
 
-                if purview_catch[lod][agent][i] is not None:
-                    purview.append([labs_2sensor[ii] for ii in purview_catch[lod][agent][i]])
-                    s1.append(1 if 's1' in purview[idx] else 0)
-                    s2.append(1 if 's2' in purview[idx] else 0)
-                    h1.append(1 if 'h1' in purview[idx] else 0)
-                    h2.append(1 if 'h2' in purview[idx] else 0)
-                    h3.append(1 if 'h3' in purview[idx] else 0)
-                    h4.append(1 if 'h4' in purview[idx] else 0)
-                    alpha.append(alpha_catch[lod][agent][i])
+                if purview[lod][agent][i] is not None:
+                    purview_aux.append([labs_2sensor[ii] for ii in purview[lod][agent][i]])
+                    s1.append(1 if 's1' in purview_aux[idx] else 0)
+                    s2.append(1 if 's2' in purview_aux[idx] else 0)
+                    h1.append(1 if 'h1' in purview_aux[idx] else 0)
+                    h2.append(1 if 'h2' in purview_aux[idx] else 0)
+                    h3.append(1 if 'h3' in purview_aux[idx] else 0)
+                    h4.append(1 if 'h4' in purview_aux[idx] else 0)
+                    alpha_aux.append(alpha[lod][agent][i])
                     idx+=1
 
                 else:
-                    purview.append('none')
-                    alpha.append(alpha_catch[lod][agent][i])
+                    purview_aux.append('none')
+                    alpha_aux.append(alpha[lod][agent][i])
                     s1.append(0)
                     s2.append(0)
                     h1.append(0)
@@ -317,48 +310,23 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
                     h4.append(0)
                     idx+=1
 
-            for i in list(range(len(purview_avoid[lod][agent]))):
+                hiddenInPurview.append(h1[idx-1]+h2[idx-1]+h3[idx-1]+h4[idx-1])
+                sensorsInPurview.append(s1[idx-1]+s2[idx-1])
 
-                motor.append(np.sum([ii*(2**idx) for ii,idx in zip(motor_avoid[lod][agent][i],list(range(0,len(motor_avoid[lod][agent][i]))))]))
-                catch.append(0)
-                transitions.append(transitions_avoid[lod][agent][i])
-                lod_aux.append(lod)
-                agent_aux.append(agent)
-
-                if purview_avoid[lod][agent][i] is not None:
-                    purview.append([labs_2sensor[ii] for ii in purview_avoid[lod][agent][i]])
-                    s1.append(1 if 's1' in purview[idx] else 0)
-                    s2.append(1 if 's2' in purview[idx] else 0)
-                    h1.append(1 if 'h1' in purview[idx] else 0)
-                    h2.append(1 if 'h2' in purview[idx] else 0)
-                    h3.append(1 if 'h3' in purview[idx] else 0)
-                    h4.append(1 if 'h4' in purview[idx] else 0)
-                    alpha.append(alpha_avoid[lod][agent][i])
-                    idx+=1
-
-                else:
-                    purview.append('none')
-                    alpha.append(alpha_avoid[lod][agent][i])
-                    s1.append(0)
-                    s2.append(0)
-                    h1.append(0)
-                    h2.append(0)
-                    h3.append(0)
-                    h4.append(0)
-                    idx+=1
-
-    dictforpd = {'purview':purview,
-                    'motor':motor,
-                    'alpha':alpha,
+    dictforpd = {'purview':purview_aux,
+                    'motor':motor_aux,
+                    'alpha':alpha_aux,
                     's1':s1,
                     's2':s2,
                     'h1':h1,
                     'h2':h2,
                     'h3':h3,
                     'h4':h4,
-                    'motor':motor,
-                    'catch': catch,
-                    'transition': transitions,
+                    'hiddenInPurview':hiddenInPurview,
+                    'sensorsInPurview':sensorsInPurview,
+                    'catch': catch_aux,
+                    'transition': transitions_aux,
+                    'account': account_aux,
                     'LOD': lod_aux,
                     'agent': agent_aux,
                     }
@@ -366,6 +334,8 @@ def createPandasFromACAnalysis(LODS,agents,activity,TPMs,CMs,labs):
     panda = pd.DataFrame(dictforpd)
 
     return panda
+
+
 
 
 ### DATA ANALYSIS FUNCTIONS
@@ -387,14 +357,14 @@ def Bootstrap_mean(data,n):
     for i in idx:
         # drawing random timeseries (with replacement) from data
         bootstrapdata = np.array([data[d][:] for d in ran.choice(list(range(0,datapoints)),datapoints,replace=True)])
-        means[i] = np.mean(bootstrapdata,0)
+        means[i] = np.nanmean(bootstrapdata,0)
 
     return means
 
 
 ### PLOTTING FUNCTIONS
 
-def plot_LODdata_and_Bootstrap(x,LODdata):
+def plot_LODdata_and_Bootstrap(x,LODdata,label='data',color='b',linestyle='-',figsize=[20,10]):
     '''
     Function for doing bootstrap resampling of the mean for a 2D data matrix.
         Inputs:
@@ -407,18 +377,17 @@ def plot_LODdata_and_Bootstrap(x,LODdata):
     fit = Bootstrap_mean(LODdata,500)
     m_fit = np.mean(fit,0)
     s_fit = np.std(fit,0)
-    fig = plt.figure(figsize=[20,10])
+    fig = plt.figure(figsize=figsize)
     for LOD in LODdata:
-        plt.plot(x,LOD,'r',alpha=0.2)
-    plt.plot(x,m_fit,'b')
-    plt.plot(x,m_fit+s_fit,'b:')
-    plt.plot(x,m_fit-s_fit,'b:')
+        plt.plot(x,LOD,'r',alpha=0.1)
+    plt.fill_between(x, m_fit-s_fit, m_fit+s_fit, color=color, alpha=0.2)
+    plt.plot(x, m_fit, label=label, color=color, linestyle=linestyle)
 
     return fig
 
 
 
-def plot_2LODdata_and_Bootstrap(x,LODdata1,LODdata2):
+def plot_2LODdata_and_Bootstrap(x,LODdata1,LODdata2,label=['data1','data2'],color=['k','y'],linestyle='-',figsize=[20,10],fig=None,subplot=111):
     '''
     Function for doing bootstrap resampling of the mean for a 2D data matrix.
         Inputs:
@@ -434,16 +403,16 @@ def plot_2LODdata_and_Bootstrap(x,LODdata1,LODdata2):
     fit2 = Bootstrap_mean(LODdata2,500)
     m_fit2 = np.mean(fit2,0)
     s_fit2 = np.std(fit2,0)
-    fig = plt.figure(figsize=[20,10])
+    if fig==None:
+        fig = plt.figure(figsize=figsize)
+    plt.subplot(subplot)
     for LOD1,LOD2 in zip(LODdata1,LODdata2):
-        plt.plot(x,LOD1,'k',alpha=0.1)
-        plt.plot(x,LOD2,'y',alpha=0.1)
-    plt.plot(x,m_fit1,'k',linewidth=3)
-    plt.plot(x,m_fit1+s_fit1,'k:',linewidth=2)
-    plt.plot(x,m_fit1-s_fit1,'k:',linewidth=2)
-    plt.plot(x,m_fit2,'y',linewidth=3)
-    plt.plot(x,m_fit2+s_fit2,'y:',linewidth=2)
-    plt.plot(x,m_fit2-s_fit2,'y:',linewidth=2)
+        plt.plot(x,LOD1,color[0],alpha=0.1)
+        plt.plot(x,LOD2,color[1],alpha=0.1)
+    plt.fill_between(x, m_fit1-s_fit1, m_fit1+s_fit1, color=color[0], alpha=0.2)
+    plt.plot(x, m_fit1, label=label[0], color=color[0], linestyle=linestyle)
+    plt.fill_between(x, m_fit2-s_fit2, m_fit2+s_fit2, color=color[1], alpha=0.2)
+    plt.plot(x, m_fit2, label=label[1], color=color[1], linestyle=linestyle)
 
     return fig
 
@@ -469,6 +438,23 @@ def hist2d_2LODdata(LODdata1x,LODdata1y,LODdata2x,LODdata2y, nbins=20):
     plt.hist2d(np.ravel(LODdata1x),np.ravel(LODdata1y),[xbins,ybins],norm=mpl.colors.LogNorm())
     plt.subplot(122)
     plt.hist2d(np.ravel(LODdata2x),np.ravel(LODdata2y),[xbins,ybins],norm=mpl.colors.LogNorm())
+
+
+def plot_mean_sem(x, y, yerr, color, label=None, linestyle=None):
+    plt.fill_between(x, y-yerr, y+yerr, color=color, alpha=0.1)
+    plt.plot(x, y, label=label, color=color, linestyle=linestyle)
+
+
+def plot_2Ddensity(x,y, plot_samples=True, cmap=plt.cm.Blues, color=None, markersize=0.7):
+    data = np.c_[x,y]
+    k = kde.gaussian_kde(data.T)
+    nbins = 20
+    xi, yi = np.mgrid[x.min():x.max():nbins*1j, y.min():y.max():nbins*1j]
+    zi = k(np.vstack([xi.flatten(), yi.flatten()]))
+    zi = k(np.vstack([xi.flatten(), yi.flatten()]))
+    plt.pcolormesh(xi, yi, zi.reshape(xi.shape), cmap=cmap)
+
+    plt.plot(x,y,'.', color=color, markersize=markersize)
 
 
 ### OTHER FUNCTIONS
@@ -528,21 +514,6 @@ def plot_brain(cm, state=None, ax=None):
     nx.draw(G, with_labels=True, node_size=800, node_color=node_colors,
     edgecolors='#000000', linewidths=linewidths, pos=pos, ax=ax)
 
-def plot_mean_sem(x, y, yerr, color, label=None, linestyle=None):
-    plt.fill_between(x, y-yerr, y+yerr, color=color, alpha=0.1)
-    plt.plot(x, y, label=label, color=color, linestyle=linestyle)
-
-
-def plot_2Ddensity(x,y, plot_samples=True, cmap=plt.cm.Blues, color=None, markersize=0.7):
-    data = np.c_[x,y]
-    k = kde.gaussian_kde(data.T)
-    nbins = 20
-    xi, yi = np.mgrid[x.min():x.max():nbins*1j, y.min():y.max():nbins*1j]
-    zi = k(np.vstack([xi.flatten(), yi.flatten()]))
-    zi = k(np.vstack([xi.flatten(), yi.flatten()]))
-    plt.pcolormesh(xi, yi, zi.reshape(xi.shape), cmap=cmap)
-
-    plt.plot(x,y,'.', color=color, markersize=markersize)
 
 def state_str(state):
     if len(state)==8:
