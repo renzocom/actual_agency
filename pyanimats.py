@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import copy
 import pyphi
+import networkx as nx
 
 class Animat:
     def __init__(self, params):
@@ -15,7 +16,7 @@ class Animat:
         self.n_motors = 2
         self.n_nodes = self.n_left_sensors + self.n_right_sensors + self.n_hidden + self.n_motors
         self.gapwidth = params['gapWidth']
-        self.length = self.n_left_sensors + self.n_right_sensors + self.gapwidth
+        self.length = 1 + self.gapwidth + 1
         self.x = params['x'] if 'x' in params else 0
         self.y = params['y'] if 'y' in params else 0
 
@@ -54,17 +55,20 @@ class Animat:
         return brain_activity
 
     def get_transition(self, trial, t, trim=False):
+        '''Returns transition: state(t-1) --> state(t).'''
         if not hasattr(self, 'brain_activity'):
             raise AttributeError('No brain activity saved yet.')
-        if t >= self.brain_activity.shape[1]-1:
-            raise IndexError('Last time step given, no transition here.')
+        if t > self.brain_activity.shape[1]:
+            raise IndexError('t is beyond number of times in brain activity, no transition here.')
+        if t == 0:
+            raise IndexError('t==0, no transition here.')
 
         if trim:
             before_state_ixs = [0,1,4,5,6,7] if self.n_nodes==8 else [0,3,4,5,6]
             after_state_ixs  = [2,3,4,5,6,7] if self.n_nodes==8 else [1,2,3,4,5,6]
-            return tuple(self.brain_activity[trial, t, before_state_ixs]), tuple(self.brain_activity[trial, t+1, after_state_ixs])
+            return tuple(self.brain_activity[trial, t-1, before_state_ixs]), tuple(self.brain_activity[trial, t, after_state_ixs])
         else:
-            return tuple(self.brain_activity[trial, t]), tuple(self.brain_activity[trial, t+1])
+            return tuple(self.brain_activity[trial, t-1]), tuple(self.brain_activity[trial, t])
 
     def get_unique_transitions(self, trial=None, trim=True):
         if not hasattr(self, 'brain_activity'):
@@ -78,7 +82,7 @@ class Animat:
         unique_transitions = []
         unique_ids = []
         for trial in trials:
-            for t in range(n_times-1):
+            for t in range(1,n_times):
                 transition = self.get_transition(trial, t, trim=True)
                 if transition not in unique_transitions:
                     unique_transitions.append(transition)
@@ -97,14 +101,18 @@ class Animat:
     def saveBrain(self, TPM, cm):
         if self.n_nodes==8 and self.n_sensors==2:
             node_labels = ['S1','S2','M1','M2','A','B','C','D']
-            network = pyphi.Network(TPM, cm, node_labels=node_labels)
-            self.brain = network
         elif self.n_nodes==7 and self.n_sensors==1:
             node_labels = ['S1','M1','M2','A','B','C','D']
-            network = pyphi.Network(TPM, cm, node_labels=node_labels)
-            self.brain = network
         else:
             print('Problem saving brain.')
+
+        network = pyphi.Network(TPM, cm, node_labels=node_labels)
+        self.brain = network
+
+        G = nx.from_numpy_matrix(cm, create_using=nx.DiGraph())
+        mapping = {key:x for key,x in zip(range(self.n_nodes),node_labels)}
+        G = nx.relabel_nodes(G, mapping)
+        self.brain_graph = G
 
     def getMotorActivity(self, trial):
         motor_states = self.brain_activity[trial,:,self.n_sensors:self.n_sensors+2]
@@ -118,6 +126,56 @@ class Animat:
             else: # state==[0,1]
                 motor_activity.append(-1)
         return motor_activity
+
+    def plot_brain(self, state=None, ax=None):
+        if self.n_nodes==7:
+            labels = ['S1','M1','M2','A','B','C','D']
+            pos = {'S1': (5,40), #'S2': (20, 40),
+               'A': (0, 30), 'B': (20, 30),
+               'C': (0, 20), 'D': (20, 20),
+              'M1': (5,10), 'M2': (15,10)}
+            nodetype = (0,1,1,2,2,2,2)
+
+            ini_hidden = 3
+
+        elif self.n_nodes==8:
+            labels = ['S1','S2','M1','M2','A','B','C','D']
+            pos = {'S1': (5,40), 'S2': (15, 40),
+               'A': (0, 30), 'B': (20, 30),
+               'C': (0, 20), 'D': (20, 20),
+              'M1': (5,10), 'M2': (15,10)}
+            nodetype = (0,0,1,1,2,2,2,2)
+            ini_hidden = 4
+
+        state = [1]*self.n_nodes if state==None else state
+
+        blue, red, green, grey, white = '#6badf9', '#f77b6c', '#8abf69', '#adadad', '#ffffff'
+        blue_off, red_off, green_off, grey_off = '#e8f0ff','#ffe9e8', '#e8f2e3', '#f2f2f2'
+
+        colors = np.array([red, blue, green, grey, white])
+        colors = np.array([[red_off,blue_off,green_off, grey_off, white],
+                           [red,blue,green, grey, white]])
+
+        node_colors = [colors[state[i],nodetype[i]] for i in range(self.n_nodes)]
+        # Grey Uneffective or unaffected nodes
+        cm_temp = copy.copy(self.brain.cm)
+        cm_temp[range(self.n_nodes),range(self.n_nodes)]=0
+        unaffected = np.where(np.sum(cm_temp,axis=0)==0)[0]
+        uneffective = np.where(np.sum(cm_temp,axis=1)==0)[0]
+        noeffect = list(set(unaffected).union(set(uneffective)))
+        noeffect = [ix for ix in noeffect if ix in range(ini_hidden,ini_hidden+4)]
+        node_colors = [node_colors[i] if i not in noeffect else colors[state[i],3] for i in range(len(self.brain_graph.nodes))]
+
+        #   White isolate nodes
+        isolates = [x for x in nx.isolates(self.brain_graph)]
+        node_colors = [node_colors[i] if labels[i] not in isolates else colors[0,4] for i in range(len(self.brain_graph.nodes))]
+
+        self_nodes = [labels[i] for i in range(self.n_nodes) if self.brain.cm[i,i]==1]
+        linewidths = [2.5 if labels[i] in self_nodes else 1 for i in range(self.n_nodes)]
+
+    #     fig, ax = plt.subplots(1,1, figsize=(4,6))
+        nx.draw(self.brain_graph, with_labels=True, node_size=800, node_color=node_colors,
+        edgecolors='#000000', linewidths=linewidths, pos=pos, ax=ax)
 
 
 class Block:

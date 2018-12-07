@@ -458,71 +458,96 @@ def plot_2Ddensity(x,y, plot_samples=True, cmap=plt.cm.Blues, color=None, marker
 
 
 ### OTHER FUNCTIONS
-def plot_brain(cm, state=None, ax=None):
-    n_nodes = cm.shape[0]
-    if n_nodes==7:
-        labels = ['S1','M1','M2','A','B','C','D']
-        pos = {'S1': (5,40), #'S2': (20, 40),
-           'A': (0, 30), 'B': (20, 30),
-           'C': (0, 20), 'D': (20, 20),
-          'M1': (5,10), 'M2': (15,10)}
-        nodetype = (0,1,1,2,2,2,2)
-
-        ini_hidden = 3
-
-    elif n_nodes==8:
-        labels = ['S1','S2','M1','M2','A','B','C','D']
-        pos = {'S1': (5,40), 'S2': (15, 40),
-           'A': (0, 30), 'B': (20, 30),
-           'C': (0, 20), 'D': (20, 20),
-          'M1': (5,10), 'M2': (15,10)}
-        nodetype = (0,0,1,1,2,2,2,2)
-        ini_hidden = 4
-
-    state = [1]*n_nodes if state==None else state
-
-    G = nx.from_numpy_matrix(cm, create_using=nx.DiGraph())
-
-    mapping = {key:x for key,x in zip(range(n_nodes),labels)}
-    G = nx.relabel_nodes(G, mapping)
-
-    blue, red, green, grey, white = '#77b3f9', '#f98e81', '#8abf69', '#adadad', '#ffffff'
-    blue_off, red_off, green_off, grey_off = '#e8f0ff','#ffe9e8', '#f0ffe8', '#f2f2f2'
-
-    colors = np.array([red, blue, green, grey, white])
-    colors = np.array([[red_off,blue_off,green_off, grey_off, white],
-                       [red,blue,green, grey, white]])
-
-    node_colors = [colors[state[i],nodetype[i]] for i in range(n_nodes)]
-    # Grey Uneffective or unaffected nodes
-    cm_temp = copy.copy(cm)
-    cm_temp[range(n_nodes),range(n_nodes)]=0
-    unaffected = np.where(np.sum(cm_temp,axis=0)==0)[0]
-    uneffective = np.where(np.sum(cm_temp,axis=1)==0)[0]
-    noeffect = list(set(unaffected).union(set(uneffective)))
-    noeffect = [ix for ix in noeffect if ix in range(ini_hidden,ini_hidden+4)]
-    node_colors = [node_colors[i] if i not in noeffect else colors[state[i],3] for i in range(len(G.nodes))]
-
-    #   White isolate nodes
-    isolates = [x for x in nx.isolates(G)]
-    node_colors = [node_colors[i] if labels[i] not in isolates else colors[0,4] for i in range(len(G.nodes))]
-
-    self_nodes = [labels[i] for i in range(n_nodes) if cm[i,i]==1]
-    linewidths = [2.5 if labels[i] in self_nodes else 1 for i in range(n_nodes)]
-
-#     fig, ax = plt.subplots(1,1, figsize=(4,6))
-    nx.draw(G, with_labels=True, node_size=800, node_color=node_colors,
-    edgecolors='#000000', linewidths=linewidths, pos=pos, ax=ax)
+# def plot_brain(cm, state=None, ax=None):
+#     n_nodes = cm.shape[0]
+#     if n_nodes==7:
+#         labels = ['S1','M1','M2','A','B','C','D']
+#         pos = {'S1': (5,40), #'S2': (20, 40),
+#            'A': (0, 30), 'B': (20, 30),
+#            'C': (0, 20), 'D': (20, 20),
+#           'M1': (5,10), 'M2': (15,10)}
+#         nodetype = (0,1,1,2,2,2,2)
+#
+#         ini_hidden = 3
+#
+#     elif n_nodes==8:
+#         labels = ['S1','S2','M1','M2','A','B','C','D']
+#         pos = {'S1': (5,40), 'S2': (15, 40),
+#            'A': (0, 30), 'B': (20, 30),
+#            'C': (0, 20), 'D': (20, 20),
+#           'M1': (5,10), 'M2': (15,10)}
+#         nodetype = (0,0,1,1,2,2,2,2)
+#         ini_hidden = 4
+#
+#     state = [1]*n_nodes if state==None else state
+#
+#     G = nx.from_numpy_matrix(cm, create_using=nx.DiGraph())
+#
+#     mapping = {key:x for key,x in zip(range(n_nodes),labels)}
+#     G = nx.relabel_nodes(G, mapping)
+#
+#     blue, red, green, grey, white = '#77b3f9', '#f98e81', '#8abf69', '#adadad', '#ffffff'
+#     blue_off, red_off, green_off, grey_off = '#e8f0ff','#ffe9e8', '#f0ffe8', '#f2f2f2'
+#
+#     colors = np.array([red, blue, green, grey, white])
+#     colors = np.array([[red_off,blue_off,green_off, grey_off, white],
+#                        [red,blue,green, grey, white]])
+#
+#     node_colors = [colors[state[i],nodetype[i]] for i in range(n_nodes)]
+#     # Grey Uneffective or unaffected nodes
+#     cm_temp = copy.copy(cm)
+#     cm_temp[range(n_nodes),range(n_nodes)]=0
+#     unaffected = np.where(np.sum(cm_temp,axis=0)==0)[0]
+#     uneffective = np.where(np.sum(cm_temp,axis=1)==0)[0]
+#     noeffect = list(set(unaffected).union(set(uneffective)))
+#     noeffect = [ix for ix in noeffect if ix in range(ini_hidden,ini_hidden+4)]
+#     node_colors = [node_colors[i] if i not in noeffect else colors[state[i],3] for i in range(len(G.nodes))]
+#
+#     #   White isolate nodes
+#     isolates = [x for x in nx.isolates(G)]
+#     node_colors = [node_colors[i] if labels[i] not in isolates else colors[0,4] for i in range(len(G.nodes))]
+#
+#     self_nodes = [labels[i] for i in range(n_nodes) if cm[i,i]==1]
+#     linewidths = [2.5 if labels[i] in self_nodes else 1 for i in range(n_nodes)]
+#
+# #     fig, ax = plt.subplots(1,1, figsize=(4,6))
+#     nx.draw(G, with_labels=True, node_size=800, node_color=node_colors,
+#     edgecolors='#000000', linewidths=linewidths, pos=pos, ax=ax)
 
 
 def state_str(state):
     if len(state)==8:
         s = '{}|{}|{}'.format(state[:2],state[2:4],state[4:])
+    elif len(state)==7:
+        s = '{}|{}|{}'.format(state[:1],state[1:3],state[3:])
+    else:
+        raise Exception('State of length {} is not accepted.'.format(len(state)))
+    return s
+
+def transition_str(transition):
+    state1, state2 = transition
+    s = state_str(state1)+' ━━▶'+state_str(state2)
     return s
 
 def print_state(state):
-    print('   S      M        H\n' + state_str(state))
+    if len(state)==8:
+        s = '   S      M        H\n' + state_str(state)
+
+    else:
+        s = '  S     M        H\n' + state_str(state)
+    print(s)
 
 def print_transition(transition):
     state1, state2 = transition
-    print('   S      M        H                S     M        H\n' + state_str(state1)+' ━━▶',state_str(state2))
+    if len(state1)==8:
+        print('   S      M        H                S     M        H\n' + state_str(state1)+' ━━▶'+state_str(state2))
+    else:
+        print('  S     M        H               S     M        H\n' + state_str(state1)+' ━━▶'+state_str(state2))
+
+def get_event_id(task,n_sensors,run,agent,trial=None,t=None):
+    if t!=None:
+        return '_'.join(['task',str(task),'sensor',str(n_sensors),'run',str(run),'agent',str(agent),'trial',str(trial),'t',str(t)])
+    if trial!=None:
+        return '_'.join(['task',str(task),'sensor',str(n_sensors),'run',str(run),'agent',str(agent),'trial',str(trial)])
+    else:
+        return '_'.join(['task',str(task),'sensor',str(n_sensors),'run',str(run),'agent',str(agent)])
