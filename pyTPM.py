@@ -6,7 +6,7 @@ import pyphi
 from pathlib import Path
 import scipy.io as sio
 
-def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='deterministic',states_convention='loli',remove_sensor_motor_effects=False):
+def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='deterministic',states_convention='loli',remove_sensor_motor_effects=True):
     '''
     Extracts the TPM from the genome output by mabe.
         Inputs:
@@ -77,9 +77,10 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
         gate_TPM = np.zeros((2**n_inputs,n_outputs))
         for row in range(2**n_inputs):
             if start_codon == 50: # Decomposable
-                start_locus = 12 + row * n_outputs + (max_io**4)
+                # start_locus = 12 + row * n_outputs + (max_io**4)
+                start_locus = 12 + row * max_outputs
                 raw_probability = gene[start_locus:start_locus+n_outputs]
-                gate_TPM[row,:] = raw_probability/256 # or 255?
+                gate_TPM[row,:] = raw_probability/255 # or 256?
 
             else: # start_codon == 43 (Deterministic)
                 start_locus = 12 + row * max_outputs
