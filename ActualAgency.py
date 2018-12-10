@@ -66,30 +66,29 @@ def getBrainActivity(data, n_agents=1, n_trials=64, n_nodes=8, n_sensors=2,n_hid
         Outputs:
             brain_activity: a matrix with the timeseries of activity for each trial of every agent. Dimensions(agents)
     '''
-    print('Creating activity matrix from MABE otput...')
-    world_height = 34
-    brain_activity = np.zeros((n_agents,n_trials,1+world_height,n_nodes))
+    print('Creating activity matrix from MABE output...')
+    n_transitions = 34
+    brain_activity = np.zeros((n_agents,n_trials,1+n_transitions,n_nodes))
 
     for a in list(range(n_agents)):
         for i in list(range(n_trials)):
-            for j in list(range(world_height+1)):
-                ix = a*n_trials*world_height + i*world_height + j
+            for j in list(range(n_transitions+1)):
+                ix = a*n_trials*n_transitions + i*n_transitions + j
                 if j==0:
-                    sensor = np.fromstring(data['input_LIST'][ix], dtype=int, sep=',')
+                    sensor = np.fromstring(str(data['input_LIST'][ix]), dtype=int, sep=',')[:n_sensors]
                     hidden = np.zeros(n_hidden)
                     motor = np.zeros(n_motors)
-                elif j==world_height:
+                elif j==n_transitions:
                     sensor = np.zeros(n_sensors)
                     hidden = np.fromstring(data['hidden_LIST'][ix-1], dtype=int, sep=',')
                     motor = np.fromstring(data['output_LIST'][ix-1], dtype=int, sep=',')
                 else:
-                    sensor = np.fromstring(data['input_LIST'][ix], dtype=int, sep=',')
+                    sensor = np.fromstring(str(data['input_LIST'][ix]), dtype=int, sep=',')[:n_sensors]
                     hidden = np.fromstring(data['hidden_LIST'][ix-1], dtype=int, sep=',')
                     motor = np.fromstring(data['output_LIST'][ix-1], dtype=int, sep=',')
                 nodes = np.r_[sensor, motor, hidden]
                 brain_activity[a,i,j,:] = nodes
     return brain_activity
-
 
 def parseActivity(path,file,n_runs=30,n_agents=61,n_trials=64,world_height=35,n_nodes=8,n_sensors=2,n_hidden=4,n_motors=2):
     with open(os.path.join(path,file),'rb') as f:
@@ -352,7 +351,7 @@ def Bootstrap_mean(data,n):
     datapoints = len(data)
     timesteps = len(data[0])
 
-    idx = list(range(0,n))
+    idx = list(range(n))
     means = [0 for i in idx]
     for i in idx:
         # drawing random timeseries (with replacement) from data
@@ -361,7 +360,9 @@ def Bootstrap_mean(data,n):
 
     return means
 
-
+def get_bootstrap_stats(data,n=500):
+    fit = Bootstrap_mean(data,n)
+    return np.mean(fit,0), np.std(fit,0)
 ### PLOTTING FUNCTIONS
 
 def plot_LODdata_and_Bootstrap(x,LODdata,label='data',color='b',linestyle='-',figsize=[20,10]):
@@ -439,11 +440,9 @@ def hist2d_2LODdata(LODdata1x,LODdata1y,LODdata2x,LODdata2y, nbins=20):
     plt.subplot(122)
     plt.hist2d(np.ravel(LODdata2x),np.ravel(LODdata2y),[xbins,ybins],norm=mpl.colors.LogNorm())
 
-
-def plot_mean_sem(x, y, yerr, color, label=None, linestyle=None):
+def plot_mean_with_errors(x, y, yerr, color, label=None, linestyle=None):
     plt.fill_between(x, y-yerr, y+yerr, color=color, alpha=0.1)
     plt.plot(x, y, label=label, color=color, linestyle=linestyle)
-
 
 def plot_2Ddensity(x,y, plot_samples=True, cmap=plt.cm.Blues, color=None, markersize=0.7):
     data = np.c_[x,y]
@@ -458,61 +457,61 @@ def plot_2Ddensity(x,y, plot_samples=True, cmap=plt.cm.Blues, color=None, marker
 
 
 ### OTHER FUNCTIONS
-# def plot_brain(cm, state=None, ax=None):
-#     n_nodes = cm.shape[0]
-#     if n_nodes==7:
-#         labels = ['S1','M1','M2','A','B','C','D']
-#         pos = {'S1': (5,40), #'S2': (20, 40),
-#            'A': (0, 30), 'B': (20, 30),
-#            'C': (0, 20), 'D': (20, 20),
-#           'M1': (5,10), 'M2': (15,10)}
-#         nodetype = (0,1,1,2,2,2,2)
-#
-#         ini_hidden = 3
-#
-#     elif n_nodes==8:
-#         labels = ['S1','S2','M1','M2','A','B','C','D']
-#         pos = {'S1': (5,40), 'S2': (15, 40),
-#            'A': (0, 30), 'B': (20, 30),
-#            'C': (0, 20), 'D': (20, 20),
-#           'M1': (5,10), 'M2': (15,10)}
-#         nodetype = (0,0,1,1,2,2,2,2)
-#         ini_hidden = 4
-#
-#     state = [1]*n_nodes if state==None else state
-#
-#     G = nx.from_numpy_matrix(cm, create_using=nx.DiGraph())
-#
-#     mapping = {key:x for key,x in zip(range(n_nodes),labels)}
-#     G = nx.relabel_nodes(G, mapping)
-#
-#     blue, red, green, grey, white = '#77b3f9', '#f98e81', '#8abf69', '#adadad', '#ffffff'
-#     blue_off, red_off, green_off, grey_off = '#e8f0ff','#ffe9e8', '#f0ffe8', '#f2f2f2'
-#
-#     colors = np.array([red, blue, green, grey, white])
-#     colors = np.array([[red_off,blue_off,green_off, grey_off, white],
-#                        [red,blue,green, grey, white]])
-#
-#     node_colors = [colors[state[i],nodetype[i]] for i in range(n_nodes)]
-#     # Grey Uneffective or unaffected nodes
-#     cm_temp = copy.copy(cm)
-#     cm_temp[range(n_nodes),range(n_nodes)]=0
-#     unaffected = np.where(np.sum(cm_temp,axis=0)==0)[0]
-#     uneffective = np.where(np.sum(cm_temp,axis=1)==0)[0]
-#     noeffect = list(set(unaffected).union(set(uneffective)))
-#     noeffect = [ix for ix in noeffect if ix in range(ini_hidden,ini_hidden+4)]
-#     node_colors = [node_colors[i] if i not in noeffect else colors[state[i],3] for i in range(len(G.nodes))]
-#
-#     #   White isolate nodes
-#     isolates = [x for x in nx.isolates(G)]
-#     node_colors = [node_colors[i] if labels[i] not in isolates else colors[0,4] for i in range(len(G.nodes))]
-#
-#     self_nodes = [labels[i] for i in range(n_nodes) if cm[i,i]==1]
-#     linewidths = [2.5 if labels[i] in self_nodes else 1 for i in range(n_nodes)]
-#
-# #     fig, ax = plt.subplots(1,1, figsize=(4,6))
-#     nx.draw(G, with_labels=True, node_size=800, node_color=node_colors,
-#     edgecolors='#000000', linewidths=linewidths, pos=pos, ax=ax)
+def plot_brain(cm, graph=None, state=None, ax=None):
+    n_nodes = cm.shape[0]
+    if n_nodes==7:
+        labels = ['S1','M1','M2','A','B','C','D']
+        pos = {'S1': (5,40), #'S2': (20, 40),
+           'A': (0, 30), 'B': (20, 30),
+           'C': (0, 20), 'D': (20, 20),
+          'M1': (5,10), 'M2': (15,10)}
+        nodetype = (0,1,1,2,2,2,2)
+
+        ini_hidden = 3
+
+    elif n_nodes==8:
+        labels = ['S1','S2','M1','M2','A','B','C','D']
+        pos = {'S1': (5,40), 'S2': (15, 40),
+           'A': (0, 30), 'B': (20, 30),
+           'C': (0, 20), 'D': (20, 20),
+          'M1': (5,10), 'M2': (15,10)}
+        nodetype = (0,0,1,1,2,2,2,2)
+        ini_hidden = 4
+
+    if graph is None:
+        graph = nx.from_numpy_matrix(cm, create_using=nx.DiGraph())
+        mapping = {key:x for key,x in zip(range(n_nodes),labels)}
+        graph = nx.relabel_nodes(graph, mapping)
+
+    state = [1]*n_nodes if state==None else state
+
+    blue, red, green, grey, white = '#6badf9', '#f77b6c', '#8abf69', '#adadad', '#ffffff'
+    blue_off, red_off, green_off, grey_off = '#e8f0ff','#ffe9e8', '#e8f2e3', '#f2f2f2'
+
+    colors = np.array([red, blue, green, grey, white])
+    colors = np.array([[red_off,blue_off,green_off, grey_off, white],
+                       [red,blue,green, grey, white]])
+
+    node_colors = [colors[state[i],nodetype[i]] for i in range(n_nodes)]
+    # Grey Uneffective or unaffected nodes
+    cm_temp = copy.copy(cm)
+    cm_temp[range(n_nodes),range(n_nodes)]=0
+    unaffected = np.where(np.sum(cm_temp,axis=0)==0)[0]
+    uneffective = np.where(np.sum(cm_temp,axis=1)==0)[0]
+    noeffect = list(set(unaffected).union(set(uneffective)))
+    noeffect = [ix for ix in noeffect if ix in range(ini_hidden,ini_hidden+4)]
+    node_colors = [node_colors[i] if i not in noeffect else colors[state[i],3] for i in range(n_nodes)]
+
+    #   White isolate nodes
+    isolates = [x for x in nx.isolates(graph)]
+    node_colors = [node_colors[i] if labels[i] not in isolates else colors[0,4] for i in range(n_nodes)]
+
+    self_nodes = [labels[i] for i in range(n_nodes) if cm[i,i]==1]
+    linewidths = [2.5 if labels[i] in self_nodes else 1 for i in range(n_nodes)]
+
+#     fig, ax = plt.subplots(1,1, figsize=(4,6))
+    nx.draw(graph, with_labels=True, node_size=800, node_color=node_colors,
+    edgecolors='#000000', linewidths=linewidths, pos=pos, ax=ax)
 
 
 def state_str(state):
