@@ -29,9 +29,8 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
 
     elif gate_type=='decomposable':
         # max_gene_length = 400
-        max_gene_length = 12 + (2**max_inputs)*max_outputs + (max_io**4) + 1
-        12 + row * n_outputs + (max_io**4)
-        start_codon = 50
+        max_gene_length = 12 + (2**max_inputs)*max_outputs + 1 #+ (max_io**4) 
+        start_codon = 52
 
     else:
         raise AttributeError("Unknown gate type.")
@@ -76,31 +75,41 @@ def genome2TPM(genome, n_nodes=8, n_sensors=2, n_motors=2, gate_type='determinis
         # Get probabilities
         gate_TPM = np.zeros((2**n_inputs,n_outputs))
         for row in range(2**n_inputs):
-            if start_codon == 50: # Decomposable
+            if start_codon == 52: # Decomposable
                 # start_locus = 12 + row * n_outputs + (max_io**4)
                 start_locus = 12 + row * max_outputs
                 raw_probability = gene[start_locus:start_locus+n_outputs]
-                gate_TPM[row,:] = raw_probability/255 # or 256?
+                gate_TPM[row,:] = raw_probability/255. # or 256?
 
-            else: # start_codon == 43 (Deterministic)
+            elif start_codon == 43: # (Deterministic)
                 start_locus = 12 + row * max_outputs
                 raw_probability = gene[start_locus:start_locus+n_outputs]
                 gate_TPM[row,:] = raw_probability % 2
 
         # Reduce gate's degenerate outputs (if there are)
-        gate_TPM, outputs = reduce_degenerate_outputs(gate_TPM, outputs)
-        gate_TPM, inputs  = reduce_degenerate_inputs(gate_TPM, inputs, states_convention)
-
-        gate_TPMs.append({'type': gate_type,
-                          'ins': inputs,
-                          'outs': outputs,
-                          'logic': gate_TPM.tolist()})
+        if start_codon == 52: # Decomposable
+            g_TPM, outputs = reduce_degenerate_outputs(1-gate_TPM, outputs)
+            g_TPM, inputs  = reduce_degenerate_inputs(g_TPM, inputs, states_convention)
+            gate_TPMs.append({'type': gate_type,
+                              'ins': inputs,
+                              'outs': outputs,
+                              'logic': (1-g_TPM).tolist()})
+        elif start_codon == 43: # (Deterministic)
+            gate_TPM, outputs = reduce_degenerate_outputs(gate_TPM, outputs)
+            gate_TPM, inputs  = reduce_degenerate_inputs(gate_TPM, inputs, states_convention)
+            gate_TPMs.append({'type': gate_type,
+                              'ins': inputs,
+                              'outs': outputs,
+                              'logic': gate_TPM.tolist()})
 
         # Get list of all possible states from nodes
         cm[np.ix_(inputs,outputs)] = 1
 
         # Expand gate TPM
-        full_TPM[:,:,i] = expand_gate_TPM(gate_TPM, inputs, outputs, n_nodes, states_convention)
+        if start_codon == 52: # Decomposable
+            full_TPM[:,:,i] = expand_gate_TPM(g_TPM, inputs, outputs, n_nodes, states_convention)
+        elif start_codon == 43: # (Deterministic)
+            full_TPM[:,:,i] = expand_gate_TPM(gate_TPM, inputs, outputs, n_nodes, states_convention)
 
     TPM = 1 - np.prod(1 - full_TPM,2)
 
