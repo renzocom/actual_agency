@@ -130,7 +130,7 @@ class Animat:
         return motor_activity
 
     def plot_brain(self, state=None, ax=None):
-        ActualAgency.plot_brain(self.cm, self.brain_graph, state, ax)
+        ActualAgency.plot_brain(self.brain.cm, self.brain_graph, state, ax)
 
 class Block:
     def __init__(self, size, direction, block_type, ini_x, ini_y=0):
@@ -220,19 +220,20 @@ class World:
         animal_init_x = trial % self.width
         self.animat.set_x(animal_init_x)
 
-        block_size = self.block_types[trial //(self.width * 2)]
+        block_size = self.block_patterns[trial //(self.width * 2)]
         block_direction = 'left' if (trial // self.width) % 2 == 0 else 'right'
         block_value = 'catch' if (trial // (self.width * 2)) % 2 == 0 else 'avoid'
         block = Block(block_size, block_direction, block_value, 0)
 
         return self.animat, block
 
-    def runFullGame(self, block_types, brain_history, animat_params):
-        self.block_types = block_types
-        self.n_trials = self.width * 2 * len(block_types)
+    def runFullGame(self, animat, block_patterns):
 
-        self.animat = Animat(animat_params)
-        self.animat.saveBrainActivity(brain_history)
+        if not hasattr(animat, 'brain_activity'):
+            raise AttributeError("Animat needs a brain activity saved to play gameself.")
+        self.animat = copy.copy(animat)
+        self.block_patterns = block_patterns
+        self.n_trials = self.width * 2 * len(block_patterns)
 
         self.history = np.zeros((self.n_trials,self.height,self.height+1,self.width))
 

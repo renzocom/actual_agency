@@ -550,3 +550,32 @@ def get_event_id(task,n_sensors,run,agent,trial=None,t=None):
         return '_'.join(['task',str(task),'sensor',str(n_sensors),'run',str(run),'agent',str(agent),'trial',str(trial)])
     else:
         return '_'.join(['task',str(task),'sensor',str(n_sensors),'run',str(run),'agent',str(agent)])
+
+def load_dataset(path):
+    print(os.listdir(path))
+
+    data = []
+    with open(os.path.join(path,'genome.pkl'),'rb') as f:
+        genomes = pickle.load(f)
+        data.append(genomes)
+    with open(os.path.join(path,'LOD_data.pkl'),'rb') as f:
+        LOD_data = pickle.load(f)
+        data.append(LOD_data)
+    if os.path.isfile(os.path.join(path,'activity_array.pkl')):
+        with open(os.path.join(path,'activity_array.pkl'),'rb') as f:
+            activity = pickle.load(f)
+            data.append(activity)
+    if os.path.isfile(os.path.join(path,'fullTPM.pkl')):
+        with open(os.path.join(path,'fullTPM.pkl'),'rb') as f:
+            TPMs = pickle.load(f)
+            data.append(TPMs)
+    if os.path.isfile(os.path.join(path,'CM.pkl')):
+        with open(os.path.join(path,'CM.pkl'),'rb') as f:
+            CMs = pickle.load(f)
+            data.append(CMs)
+    if os.path.isfile(os.path.join(path,'inferred_CM.pkl')):
+        with open(os.path.join(path,'inferred_CM.pkl'),'rb') as f:
+            inferred_CMs = pickle.load(f)
+            data.append(inferred_CMs)
+    return tuple(data)
+ 
