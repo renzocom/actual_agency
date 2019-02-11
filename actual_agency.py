@@ -1,5 +1,5 @@
 
-import numpy as np
+import numpy as npw
 import pandas as pd
 import subprocess as sp
 import pickle
@@ -8,12 +8,15 @@ import matplotlib as mpl
 import os
 import numpy.random as ran
 import copy
-import pyphi
 from pathlib import Path
 import scipy.io as sio
 import networkx as nx
 from scipy.stats import kde
 
+basepath = '/Users/gryllos/Documents'
+path = os.path.join(basepath, 'software/pyphi')
+sys.path.append(path)
+import pyphi
 
 ### MABE RELATED FUNCTIONS
 def parseTPM(TPM_jory):
@@ -578,4 +581,3 @@ def load_dataset(path):
             inferred_CMs = pickle.load(f)
             data.append(inferred_CMs)
     return tuple(data)
- 
